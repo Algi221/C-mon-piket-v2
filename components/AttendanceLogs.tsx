@@ -12,6 +12,28 @@ export default function AttendanceLogs({ logs }: AttendanceLogsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
+  // Helper to parse Base64 attachments
+  const parseMedia = (imagePath: string): { photos: string[]; video: string | null } => {
+    try {
+      if (imagePath && imagePath.startsWith('{')) {
+        const parsed = JSON.parse(imagePath);
+        return {
+          photos: parsed.photos || [],
+          video: parsed.video || null,
+        };
+      }
+    } catch (e) {
+      console.warn('Failed parse:', e);
+    }
+    
+    if (!imagePath) return { photos: [], video: null };
+    const isVideo = imagePath.endsWith('.mp4') || imagePath.startsWith('data:video');
+    return {
+      photos: isVideo ? [] : [imagePath],
+      video: isVideo ? imagePath : null,
+    };
+  };
+
   const filteredLogs = logs.filter((log) =>
     log.reporter_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.date.includes(searchTerm)
@@ -98,23 +120,40 @@ export default function AttendanceLogs({ logs }: AttendanceLogsProps) {
                     </span>
                   </div>
 
-                  {/* Image Proof */}
-                  {log.image_path && (
-                    <div 
-                      onClick={() => setSelectedPhoto(log.image_path)}
-                      className="border-b-2 border-black h-40 w-full relative overflow-hidden bg-zinc-900 cursor-pointer group"
-                    >
-                      <img 
-                        src={log.image_path} 
-                        alt="Bukti Piket" 
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform" 
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-black text-xs uppercase">
-                        <ExternalLink className="h-4 w-4 stroke-[3px]" />
-                        Perbesar Foto
+                  {/* Image & Video Proof with proper parsing */}
+                  {(() => {
+                    const media = parseMedia(log.image_path);
+                    return (
+                      <div className="space-y-2">
+                        {media.photos.length > 0 && (
+                          <div 
+                            onClick={() => setSelectedPhoto(media.photos[0])}
+                            className="border-b-2 border-black h-40 w-full relative overflow-hidden bg-zinc-900 cursor-pointer group"
+                          >
+                            <img 
+                              src={media.photos[0]} 
+                              alt="Bukti Piket" 
+                              className="object-cover w-full h-full group-hover:scale-105 transition-transform" 
+                            />
+                            {media.photos.length > 1 && (
+                              <span className="absolute bottom-2.5 right-2.5 bg-black/70 border border-white text-white text-[8px] font-black px-2 py-0.5 shadow-[1px_1px_0px_0px_#000000] z-10">
+                                +{media.photos.length - 1} FOTO MALAM
+                              </span>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-black text-xs uppercase">
+                              <ExternalLink className="h-4 w-4 stroke-[3px]" />
+                              Perbesar Foto
+                            </div>
+                          </div>
+                        )}
+                        {media.video && (
+                          <div className="p-3 border-b-2 border-black bg-zinc-900 overflow-hidden max-h-36 flex items-center justify-center">
+                            <video controls className="w-full h-full max-h-32" src={media.video} />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Body Content */}
                   <div className="p-4">

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Users, UserPlus, Trash2, Edit2, Check, X, ShieldAlert } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Users, UserPlus, Trash2, Edit2, Check, X, ShieldAlert, Search } from 'lucide-react';
 import { db, User } from '../lib/db';
 
 interface StudentManagementProps {
@@ -17,12 +17,23 @@ export default function StudentManagement({ currentUser, students, onActionCompl
   const [password, setPassword] = useState('123');
   const [adding, setAdding] = useState(false);
 
+  // Search filter query
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Edit Student State
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editNipd, setEditNipd] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  // Filter students by search query
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => 
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.nipd.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [students, searchQuery]);
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,185 +104,198 @@ export default function StudentManagement({ currentUser, students, onActionCompl
   };
 
   return (
-    <div className="mx-auto max-w-6xl p-4 font-sans md:p-6 animate-fade-in">
+    <div className="mx-auto max-w-7xl p-2 font-sans animate-fade-in space-y-5">
       
       {/* Page Header */}
-      <div className="mb-8 border-4 border-black bg-purple-300 p-6 shadow-[6px_6px_0px_0px_#000000]">
-        <h1 className="text-4xl font-black tracking-tight text-black flex items-center gap-3">
-          <Users className="h-10 w-10 stroke-[3px]" />
-          KELOLA SISWA KELAS
+      <div className="border-4 border-black bg-purple-300 p-5 shadow-[5px_5px_0px_0px_#000000]">
+        <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-3">
+          <Users className="h-9 w-9 stroke-[3px]" />
+          KELOLA SISWA KELAS XI-J
         </h1>
-        <p className="mt-2 text-sm font-bold text-zinc-800 uppercase">
-          Manajemen nama siswa, NIPD login, dan roster piket kelas. Perubahan disinkronkan langsung ke Supabase!
+        <p className="mt-1.5 text-xs font-bold text-zinc-800 uppercase">
+          Manajemen nama siswa, NIPD login, dan koordinasi sandi kelas.
         </p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-5 items-stretch">
         
-        {/* Add Student Form */}
-        <div className="border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000] h-fit">
-          <h2 className="text-2xl font-black uppercase mb-4 flex items-center gap-2 border-b-2 border-black pb-2">
-            <UserPlus className="h-6 w-6 stroke-[3px] text-purple-600" />
-            Tambah Siswa
-          </h2>
+        {/* Left column: Add Student Form */}
+        <div className="lg:col-span-2 border-4 border-black bg-white p-5 shadow-[5px_5px_0px_0px_#000000] flex flex-col justify-between">
+          <div>
+            <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 border-b-2 border-black pb-1.5">
+              <UserPlus className="h-5.5 w-5.5 stroke-[3px] text-purple-600" />
+              Registrasi Siswa Baru
+            </h2>
 
-          <form onSubmit={handleAddStudent} className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase text-black mb-1">NAMA LENGKAP SISWA</label>
-              <input
-                type="text"
-                placeholder="CONTOH: AHMAD SUBARDJO"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border-4 border-black bg-zinc-50 p-2.5 font-bold text-xs placeholder-zinc-400 outline-none focus:bg-white shadow-[2px_2px_0px_0px_#000000]"
-              />
-            </div>
+            <form onSubmit={handleAddStudent} className="space-y-3.5">
+              <div>
+                <label className="block text-[9px] font-black uppercase text-black mb-1">NAMA LENGKAP SISWA</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="CONTOH: CLARISSA PUTRI"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full border-4 border-black bg-zinc-50 p-2 font-bold text-xs placeholder-zinc-400 outline-none focus:bg-white shadow-[1.5px_1.5px_0px_0px_#000000]"
+                />
+              </div>
 
-            <div>
-              <label className="block text-[10px] font-black uppercase text-black mb-1">NIPD / LOGIN ID</label>
-              <input
-                type="text"
-                placeholder="CONTOH: 0006"
-                value={nipd}
-                onChange={(e) => setNipd(e.target.value)}
-                className="w-full border-4 border-black bg-zinc-50 p-2.5 font-bold text-xs placeholder-zinc-400 outline-none focus:bg-white shadow-[2px_2px_0px_0px_#000000]"
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] font-black uppercase text-black mb-1">NIPD / LOGIN ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="CONTOH: 0007"
+                    value={nipd}
+                    onChange={(e) => setNipd(e.target.value)}
+                    className="w-full border-4 border-black bg-zinc-50 p-2 font-bold text-xs placeholder-zinc-400 outline-none focus:bg-white shadow-[1.5px_1.5px_0px_0px_#000000]"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-[10px] font-black uppercase text-black mb-1">PASSWORD DAFTAR</label>
-              <input
-                type="text"
-                placeholder="DEFAULT: 123"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full border-4 border-black bg-zinc-50 p-2.5 font-bold text-xs placeholder-zinc-400 outline-none focus:bg-white shadow-[2px_2px_0px_0px_#000000]"
-              />
-            </div>
+                <div>
+                  <label className="block text-[9px] font-black uppercase text-black mb-1">PASSWORD LOGIN</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="DEFAULT: 123"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border-4 border-black bg-zinc-50 p-2 font-bold text-xs placeholder-zinc-400 outline-none focus:bg-white shadow-[1.5px_1.5px_0px_0px_#000000]"
+                  />
+                </div>
+              </div>
 
-            <button
-              type="submit"
-              disabled={adding}
-              className="w-full border-2 border-black bg-purple-300 p-3 font-black text-xs uppercase text-black transition-all shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_#000000] active:translate-x-0 active:translate-y-0 active:shadow-none cursor-pointer"
-            >
-              {adding ? 'MENAMBAHKAN...' : 'TAMBAH SISWA! ➕'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={adding}
+                className="w-full border-2 border-black bg-purple-300 p-2.5 font-black text-xs uppercase text-black transition-all shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_#000000] active:translate-x-0 cursor-pointer"
+              >
+                {adding ? 'MENAMBAHKAN...' : 'TAMBAH SISWA BARU ➕'}
+              </button>
+            </form>
+          </div>
 
-          {/* Quick Notice */}
+          {/* Guidelines info */}
           <div className="mt-6 border-2 border-black bg-zinc-50 p-3 shadow-[2px_2px_0px_0px_#000000]">
-            <p className="text-[10px] font-black uppercase flex items-center gap-1 mb-1">
-              <ShieldAlert className="h-4 w-4 stroke-[2.5px] text-orange-500" />
-              Ingat Petugas
+            <p className="text-[9px] font-black uppercase flex items-center gap-1 mb-0.5 text-zinc-900">
+              <ShieldAlert className="h-4.5 w-4.5 stroke-[2.5px] text-orange-500 shrink-0" />
+              INFORMASI ALUR PIKET
             </p>
-            <p className="text-[9px] font-bold text-zinc-500 uppercase leading-relaxed">
-              Setelah mendaftarkan siswa baru, ingatlah untuk menetapkan jadwal piket mingguan mereka pada menu **JADWAL PIKET** agar terdaftar di regu harian!
+            <p className="text-[8px] font-bold text-zinc-500 uppercase leading-relaxed">
+              Setelah mendaftarkan siswa baru, harap langsung tambahkan nama mereka ke roster mingguan di tab **JADWAL PIKET** agar terdaftar di regu harian.
             </p>
           </div>
         </div>
 
-        {/* Students List */}
-        <div className="border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000] md:col-span-2">
-          <h2 className="text-2xl font-black uppercase mb-4">
-            Daftar Anggota Kelas ({students.length} Siswa)
-          </h2>
-
-          {students.length === 0 ? (
-            <div className="border-4 border-dashed border-zinc-200 py-12 text-center">
-              <Users className="mx-auto h-12 w-12 text-zinc-300 stroke-[2px] mb-2" />
-              <p className="text-lg font-black text-zinc-400 uppercase">Belum ada siswa terdaftar!</p>
-              <p className="text-xs font-bold text-zinc-400 uppercase mt-0.5">Daftarkan siswa baru menggunakan formulir di samping.</p>
+        {/* Right column: Scrollable student lists in a neat, fixed-height panel */}
+        <div className="lg:col-span-3 border-4 border-black bg-white p-5 shadow-[5px_5px_0px_0px_#000000] flex flex-col h-[480px]">
+          
+          {/* List Search Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b-4 border-black pb-3 mb-4 shrink-0 gap-2">
+            <h2 className="text-xl font-black uppercase text-black leading-none">
+              Daftar Anggota ({students.length} Siswa)
+            </h2>
+            
+            <div className="relative max-w-xs w-full">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 stroke-[3px] text-black" />
+              <input
+                type="text"
+                placeholder="Cari NIPD / nama..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full border-2 border-black bg-zinc-50 pl-8 pr-2.5 py-1.5 font-bold text-[10px] placeholder-zinc-400 uppercase outline-none focus:bg-white"
+              />
             </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {students.map((student) => {
+          </div>
+
+          {/* Compact Students List */}
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+            {filteredStudents.length === 0 ? (
+              <div className="py-12 text-center text-zinc-400 font-bold border-2 border-dashed border-zinc-200">
+                <Users className="mx-auto h-10 w-10 stroke-[2px] mb-1 opacity-50" />
+                <p className="text-xs uppercase">Siswa tidak ditemukan</p>
+              </div>
+            ) : (
+              filteredStudents.map((student) => {
                 const isEditing = editingId === student.id;
 
                 return (
                   <div
                     key={student.id}
-                    className="border-4 border-black p-4 bg-white shadow-[4px_4px_0px_0px_#000000] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_#000000] transition-all flex flex-col justify-between"
+                    className={`border-2 border-black p-3 bg-white shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isEditing ? 'bg-yellow-50 border-pink-400' : ''
+                    }`}
                   >
                     {isEditing ? (
-                      // Editing Form View
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-[8px] font-black uppercase text-zinc-400 mb-0.5">EDIT NAMA</label>
+                      /* Compact Inline Edit Form */
+                      <div className="flex-1 grid gap-3 sm:grid-cols-3">
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Nama Siswa"
+                          className="border-2 border-black bg-white px-2 py-1 font-bold text-xs uppercase"
+                        />
+                        <input
+                          type="text"
+                          value={editNipd}
+                          onChange={(e) => setEditNipd(e.target.value)}
+                          placeholder="NIPD"
+                          className="border-2 border-black bg-white px-2 py-1 font-bold text-xs"
+                        />
+                        <div className="flex gap-2">
                           <input
                             type="text"
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="w-full border-2 border-black bg-zinc-50 p-1.5 font-bold text-xs uppercase"
+                            value={editPassword}
+                            onChange={(e) => setEditPassword(e.target.value)}
+                            placeholder="Sandi"
+                            className="flex-1 border-2 border-black bg-white px-2 py-1 font-bold text-xs"
                           />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-[8px] font-black uppercase text-zinc-400 mb-0.5">EDIT NIPD</label>
-                            <input
-                              type="text"
-                              value={editNipd}
-                              onChange={(e) => setEditNipd(e.target.value)}
-                              className="w-full border-2 border-black bg-zinc-50 p-1.5 font-bold text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[8px] font-black uppercase text-zinc-400 mb-0.5">EDIT PASS</label>
-                            <input
-                              type="text"
-                              value={editPassword}
-                              onChange={(e) => setEditPassword(e.target.value)}
-                              className="w-full border-2 border-black bg-zinc-50 p-1.5 font-bold text-xs"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5 pt-1">
                           <button
                             onClick={() => handleUpdateStudent(student.id)}
                             disabled={updating}
-                            className="flex-1 border-2 border-black bg-green-300 py-1 text-[10px] font-black uppercase text-black flex items-center justify-center gap-1 shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
+                            className="bg-green-300 border-2 border-black h-8 w-8 flex items-center justify-center cursor-pointer shadow-[1px_1px_0px_0px_#000000]"
+                            title="Simpan"
                           >
-                            <Check className="h-3 w-3 stroke-[3px]" /> SIMPAN
+                            <Check className="h-4 w-4 stroke-[3px] text-black" />
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="flex-1 border-2 border-black bg-red-300 py-1 text-[10px] font-black uppercase text-black flex items-center justify-center gap-1 shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
+                            className="bg-red-300 border-2 border-black h-8 w-8 flex items-center justify-center cursor-pointer shadow-[1px_1px_0px_0px_#000000]"
+                            title="Batal"
                           >
-                            <X className="h-3 w-3 stroke-[3px]" /> BATAL
+                            <X className="h-4 w-4 stroke-[3px] text-black" />
                           </button>
                         </div>
                       </div>
                     ) : (
-                      // Standard Card View
+                      /* Compact Row View */
                       <>
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="border border-black bg-zinc-950 px-2 py-0.5 text-[8px] font-black text-white uppercase">
-                              NIPD: {student.nipd}
-                            </span>
-                            <span className="border border-black bg-purple-100 px-1.5 py-0.2 text-[8px] font-black text-purple-800 uppercase">
-                              PASS: {student.password || '123'}
-                            </span>
+                        <div className="min-w-0 flex-1 flex items-center gap-3">
+                          <span className="border-2 border-black bg-zinc-900 px-2 py-0.5 text-[9px] font-black text-white shrink-0 shadow-[1px_1px_0px_0px_#000000]">
+                            {student.nipd}
+                          </span>
+                          <div className="truncate">
+                            <h3 className="text-xs font-black text-black uppercase truncate">{student.name}</h3>
+                            <span className="text-[8px] font-bold text-zinc-400 uppercase">SANDI: {student.password || '123'}</span>
                           </div>
-
-                          <h3 className="text-base font-black text-black leading-tight uppercase truncate">
-                            {student.name}
-                          </h3>
                         </div>
 
-                        {/* Card Operations */}
-                        <div className="mt-4 flex gap-2 border-t-2 border-zinc-100 pt-3">
+                        {/* Operations */}
+                        <div className="flex gap-1.5 shrink-0 justify-end">
                           <button
                             onClick={() => handleEditClick(student)}
-                            className="flex-1 border border-black bg-white hover:bg-zinc-100 py-1.5 text-[9px] font-black uppercase text-black transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="border border-black bg-white hover:bg-zinc-100 p-1.5 text-[9px] font-black uppercase text-black flex items-center gap-1 cursor-pointer"
                           >
-                            <Edit2 className="h-3 w-3 stroke-[3.5px] text-zinc-600" />
+                            <Edit2 className="h-3 w-3 stroke-[3px] text-zinc-700" />
                             EDIT
                           </button>
                           <button
                             onClick={() => handleDeleteStudent(student.id, student.name)}
-                            className="flex-1 border border-black bg-red-100 hover:bg-red-200 py-1.5 text-[9px] font-black uppercase text-red-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="border border-black bg-red-100 hover:bg-red-200 p-1.5 text-[9px] font-black uppercase text-red-700 flex items-center gap-1 cursor-pointer"
                           >
-                            <Trash2 className="h-3 w-3 stroke-[3.5px]" />
+                            <Trash2 className="h-3 w-3 stroke-[3px]" />
                             HAPUS
                           </button>
                         </div>
@@ -279,9 +303,10 @@ export default function StudentManagement({ currentUser, students, onActionCompl
                     )}
                   </div>
                 );
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
+
         </div>
 
       </div>

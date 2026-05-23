@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Welcome from '../components/Welcome';
+import Login from '../components/Login';
 import Dashboard from '../components/Dashboard';
 import ScheduleManager from '../components/ScheduleManager';
 import AttendanceLogs from '../components/AttendanceLogs';
@@ -27,9 +28,10 @@ export default function Home() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [logs, setLogs] = useState<Report[]>([]);
 
-  // Check login session in browser
+  // Check login session and theme in browser on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // 1. Restore User Session
       const savedUser = localStorage.getItem('cmon_session_user');
       if (savedUser) {
         try {
@@ -39,6 +41,14 @@ export default function Home() {
         } catch (e) {
           console.error(e);
         }
+      }
+
+      // 2. Restore Theme Preferences (Light / Dark Mode)
+      const savedTheme = localStorage.getItem('cmon_theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
       }
     }
   }, []);
@@ -125,6 +135,9 @@ export default function Home() {
           schedules={schedules}
           logs={logs}
           onActionComplete={handleActionComplete}
+          onLogout={handleLogout}
+          supabaseConnected={supabaseConnected}
+          onProfileUpdate={handleProfileUpdate}
         />
       );
     }
@@ -140,6 +153,22 @@ export default function Home() {
       />
     );
   };
+
+  // If logged in as Guru, return TeacherDashboard directly as a full-screen sidebar portal
+  if (currentUser && currentUser.role === 'guru') {
+    return (
+      <TeacherDashboard 
+        currentUser={currentUser}
+        students={students}
+        schedules={schedules}
+        logs={logs}
+        onActionComplete={handleActionComplete}
+        onLogout={handleLogout}
+        supabaseConnected={supabaseConnected}
+        onProfileUpdate={handleProfileUpdate}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[#fbfbf8] text-black">
@@ -169,6 +198,12 @@ export default function Home() {
           <div className="animate-fade-in">
             {currentTab === 'welcome' && (
               <Welcome 
+                currentUser={currentUser}
+                setCurrentTab={setCurrentTab}
+              />
+            )}
+            {currentTab === 'login' && (
+              <Login 
                 onLoginSuccess={handleLoginSuccess}
                 currentUser={currentUser}
                 setCurrentTab={setCurrentTab}

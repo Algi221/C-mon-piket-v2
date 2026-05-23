@@ -97,3 +97,162 @@ body {
 .neo-shadow-cyan {
   box-shadow: 4px 4px 0px 0px #22d3ee;
 }
+
+/* ==========================================
+   NEUBRUTALISM PREMIUM DARK MODE SYSTEM
+   ========================================== */
+
+.dark body,
+.dark div.bg-\[\#fbfbf8\] {
+  background-color: #0f0f0e !important;
+  color: #ffffff !important;
+}
+
+/* Card overrides */
+.dark .bg-white {
+  background-color: #1a1a19 !important;
+  color: #ffffff !important;
+}
+
+.dark .bg-zinc-50,
+.dark .bg-zinc-100,
+.dark .bg-zinc-200 {
+  background-color: #262624 !important;
+  color: #ffffff !important;
+}
+
+.dark .bg-zinc-300,
+.dark .bg-zinc-400 {
+  background-color: #3f3f3e !important;
+  color: #ffffff !important;
+}
+
+/* Text overrides */
+.dark .text-black,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark p:not(.text-zinc-500) {
+  color: #ffffff !important;
+}
+
+.dark .text-zinc-700,
+.dark .text-zinc-600 {
+  color: #d4d4d8 !important;
+}
+
+/* Border overrides */
+.dark .border-black {
+  border-color: #ffffff !important;
+}
+
+/* Shadow overrides - cover all 10 compiled neubrutalist shadow variants */
+.dark .neo-shadow,
+.dark .shadow-\[1px_1px_0px_0px_\#000000\] { box-shadow: 1px 1px 0px 0px #ffffff !important; }
+.dark .shadow-\[1\.5px_1\.5px_0px_0px_\#000000\] { box-shadow: 1.5px 1.5px 0px 0px #ffffff !important; }
+.dark .shadow-\[2px_2px_0px_0px_\#000000\] { box-shadow: 2px 2px 0px 0px #ffffff !important; }
+.dark .shadow-\[2\.5px_2\.5px_0px_0px_\#000000\] { box-shadow: 2.5px 2.5px 0px 0px #ffffff !important; }
+.dark .shadow-\[3px_3px_0px_0px_\#000000\] { box-shadow: 3px 3px 0px 0px #ffffff !important; }
+.dark .shadow-\[4px_4px_0px_0px_\#000000\] { box-shadow: 4px 4px 0px 0px #ffffff !important; }
+.dark .shadow-\[5px_5px_0px_0px_\#000000\] { box-shadow: 5px 5px 0px 0px #ffffff !important; }
+.dark .neo-shadow-large,
+.dark .shadow-\[6px_6px_0px_0px_\#000000\] { box-shadow: 6px 6px 0px 0px #ffffff !important; }
+.dark .shadow-\[7px_7px_0px_0px_\#000000\] { box-shadow: 7px 7px 0px 0px #ffffff !important; }
+.dark .shadow-\[8px_8px_0px_0px_\#000000\] { box-shadow: 8px 8px 0px 0px #ffffff !important; }
+
+/* Keep neubrutalist highlight boxes readable with black text */
+.dark .bg-yellow-300,
+.dark .bg-cyan-300,
+.dark .bg-pink-300,
+.dark .bg-pink-400,
+.dark .bg-purple-300,
+.dark .bg-purple-200,
+.dark .bg-amber-300,
+.dark .bg-green-300,
+.dark .bg-emerald-400,
+.dark .bg-red-300,
+.dark .bg-red-400 {
+  color: #000000 !important;
+}
+
+.dark .bg-yellow-300 *,
+.dark .bg-cyan-300 *,
+.dark .bg-pink-300 *,
+.dark .bg-pink-400 *,
+.dark .bg-purple-300 *,
+.dark .bg-purple-200 *,
+.dark .bg-amber-300 *,
+.dark .bg-green-300 *,
+.dark .bg-emerald-400 *,
+.dark .bg-red-300 *,
+.dark .bg-red-400 * {
+  color: #000000 !important;
+}
+
+/* Specific heading inside highlights override */
+.dark .bg-yellow-300 h1, .dark .bg-yellow-300 h2, .dark .bg-yellow-300 h3, .dark .bg-yellow-300 h4, .dark .bg-yellow-300 p,
+.dark .bg-cyan-300 h1, .dark .bg-cyan-300 h2, .dark .bg-cyan-300 h3, .dark .bg-cyan-300 h4, .dark .bg-cyan-300 p,
+.dark .bg-pink-300 h1, .dark .bg-pink-300 h2, .dark .bg-pink-300 h3, .dark .bg-pink-300 h4, .dark .bg-pink-300 p,
+.dark .bg-pink-400 h1, .dark .bg-pink-400 h2, .dark .bg-pink-400 h3, .dark .bg-pink-400 h4, .dark .bg-pink-400 p,
+.dark .bg-purple-300 h1, .dark .bg-purple-300 h2, .dark .bg-purple-300 h3, .dark .bg-purple-300 h4, .dark .bg-purple-300 p,
+.dark .bg-purple-200 h1, .dark .bg-purple-200 h2, .dark .bg-purple-200 h3, .dark .bg-purple-200 h4, .dark .bg-purple-200 p,
+.dark .bg-amber-300 h1, .dark .bg-amber-300 h2, .dark .bg-amber-300 h3, .dark .bg-amber-300 h4, .dark .bg-amber-300 p,
+.dark .bg-green-300 h1, .dark .bg-green-300 h2, .dark .bg-green-300 h3, .dark .bg-green-300 h4, .dark .bg-green-300 p,
+.dark .bg-emerald-400 h1, .dark .bg-emerald-400 h2, .dark .bg-emerald-400 h3, .dark .bg-emerald-400 h4, .dark .bg-emerald-400 p,
+.dark .bg-red-300 h1, .dark .bg-red-300 h2, .dark .bg-red-300 h3, .dark .bg-red-300 h4, .dark .bg-red-300 p,
+.dark .bg-red-400 h1, .dark .bg-red-400 h2, .dark .bg-red-400 h3, .dark .bg-red-400 h4, .dark .bg-red-400 p {
+  color: #000000 !important;
+}
+
+/* Form inputs */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #262624 !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #71717a !important;
+}
+
+/* Sidebar and tables */
+.dark aside,
+.dark header,
+.dark footer {
+  background-color: #1a1a19 !important;
+  border-color: #ffffff !important;
+}
+
+.dark table {
+  background-color: #1a1a19 !important;
+  border-color: #ffffff !important;
+}
+
+.dark tr:hover {
+  background-color: #262624 !important;
+}
+
+.dark th {
+  background-color: #262624 !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+.dark td {
+  border-color: #ffffff !important;
+}
+
+/* Scrollbars overrides */
+.dark ::-webkit-scrollbar-track {
+  background: #1a1a19 !important;
+  border-left: 4px solid #ffffff !important;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #facc15 !important;
+  border: 3px solid #1a1a19 !important;
+}

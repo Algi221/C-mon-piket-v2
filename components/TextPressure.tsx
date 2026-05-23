@@ -106,6 +106,10 @@ const TextPressure: React.FC<TextPressureProps> = ({
     const { width: containerW, height: containerH } = containerRef.current.getBoundingClientRect();
 
     let newFontSize = containerW / (chars.length / 2);
+    // Clamp font size to container height to prevent any vertical cut-off/clipping
+    if (containerH > 0 && newFontSize > containerH * 0.85) {
+      newFontSize = containerH * 0.85;
+    }
     newFontSize = Math.max(newFontSize, minFontSize);
 
     setFontSize(newFontSize);
@@ -207,7 +211,7 @@ const TextPressure: React.FC<TextPressureProps> = ({
       <h1
         ref={titleRef}
         className={`text-pressure-title ${className} ${
-          flex ? 'flex justify-between' : ''
+          flex ? 'flex justify-center gap-1 sm:gap-2.5 md:gap-3.5' : ''
         } ${stroke ? 'stroke' : ''} uppercase text-center`}
         style={{
           fontFamily,

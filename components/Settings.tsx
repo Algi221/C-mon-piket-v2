@@ -51,6 +51,14 @@ export default function Settings({ currentUser, onProfileUpdate, onLogout }: Set
       const isDark = document.documentElement.classList.contains('dark') || 
                      localStorage.getItem('cmon_theme') === 'dark';
       setDarkMode(isDark);
+
+      const handleThemeChange = () => {
+        setDarkMode(document.documentElement.classList.contains('dark'));
+      };
+      window.addEventListener('cmon-theme-change', handleThemeChange);
+      return () => {
+        window.removeEventListener('cmon-theme-change', handleThemeChange);
+      };
     }
   }, [currentUser]);
 
@@ -129,17 +137,6 @@ export default function Settings({ currentUser, onProfileUpdate, onLogout }: Set
       }
 
       if (success) {
-        // Apply dark mode theme
-        if (typeof window !== 'undefined') {
-          if (darkMode) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('cmon_theme', 'dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('cmon_theme', 'light');
-          }
-        }
-        
         setSettingsSuccess(true);
         setPassword('');
         setConfirmPassword('');
@@ -152,6 +149,21 @@ export default function Settings({ currentUser, onProfileUpdate, onLogout }: Set
       alert('Terjadi kesalahan saat menyimpan pengaturan.');
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const handleToggleTheme = () => {
+    const nextMode = !darkMode;
+    setDarkMode(nextMode);
+    if (typeof window !== 'undefined') {
+      if (nextMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('cmon_theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('cmon_theme', 'light');
+      }
+      window.dispatchEvent(new Event('cmon-theme-change'));
     }
   };
 
@@ -227,17 +239,17 @@ export default function Settings({ currentUser, onProfileUpdate, onLogout }: Set
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 {/* Profile Avatar Frame */}
                 <div className="relative group">
-                  <div className="h-28 w-28 rounded-full border-4 border-black overflow-hidden bg-zinc-100 shadow-[3px_3px_0px_0px_#000000] transition-transform hover:scale-105">
+                  <div className="h-40 w-40 rounded-full border-4 border-black overflow-hidden bg-zinc-100 shadow-[5px_5px_0px_0px_#000000] transition-transform hover:scale-105">
                     {photoPreview ? (
                       <img src={photoPreview} alt="Avatar Preview" className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center bg-yellow-100 text-black">
-                        <UserIcon className="h-12 w-12 stroke-[2px]" />
+                        <UserIcon className="h-16 w-16 stroke-[2px]" />
                       </div>
                     )}
                   </div>
-                  <label className="absolute bottom-0 right-0 h-9 w-9 bg-pink-300 border-2 border-black rounded-full flex items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_#000000] hover:translate-y-0.5 active:shadow-none active:translate-y-1">
-                    <Camera className="h-4.5 w-4.5 stroke-[3px] text-black" />
+                  <label className="absolute bottom-1 right-1 h-11 w-11 bg-pink-300 border-2 border-black rounded-full flex items-center justify-center cursor-pointer shadow-[2.5px_2.5px_0px_0px_#000000] hover:translate-y-0.5 active:shadow-none active:translate-y-1">
+                    <Camera className="h-5 w-5 stroke-[3px] text-black" />
                     <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                   </label>
                 </div>
@@ -301,7 +313,7 @@ export default function Settings({ currentUser, onProfileUpdate, onLogout }: Set
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setDarkMode(!darkMode)}
+                    onClick={handleToggleTheme}
                     className={`flex items-center gap-2 border-2 border-black px-4 py-2 text-xs font-black uppercase shadow-[2px_2px_0px_0px_#000000] active:shadow-none active:translate-y-0.5 ${
                       darkMode ? 'bg-zinc-800 text-white shadow-none translate-y-0.5' : 'bg-yellow-300 text-black'
                     }`}

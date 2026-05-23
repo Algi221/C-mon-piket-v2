@@ -53,14 +53,24 @@ export default function ScheduleManager({ currentUser, students, schedules, onAc
   };
 
   const setPJStudent = (studentId: number) => {
-    setAssignedRoster(assignedRoster.map(r => ({
-      ...r,
-      isPj: r.userId === studentId, // Mark selected student as PJ, set others to false
-    })));
+    setAssignedRoster(assignedRoster.map(r => {
+      if (r.userId === studentId) {
+        return { ...r, isPj: !r.isPj };
+      }
+      return r;
+    }));
   };
 
   const handleSave = async () => {
     if (!selectedDay) return;
+
+    // Enforce that each duty roster day has at least 2 PJs
+    const pjCount = assignedRoster.filter(r => r.isPj).length;
+    if (pjCount < 2) {
+      alert('Peringatan Roster: Setiap hari piket wajib memiliki minimal 2 Penanggung Jawab (PJ) kelas!');
+      return;
+    }
+
     setSaving(true);
     try {
       await db.setSchedule(selectedDay, assignedRoster);

@@ -1,9 +1,35 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Database, Users, Calendar as CalendarIcon, ClipboardList, Check, X, ShieldAlert, Sparkles, UserPlus, Play, Film, Image as ImageIcon, AlertTriangle, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
-import { db, User, Schedule, Report, ReportDetail } from '../lib/db';
+import { 
+  LayoutDashboard, 
+  Users, 
+  Calendar as CalendarIcon, 
+  ClipboardList, 
+  Settings as SettingsIcon, 
+  LogOut, 
+  Check, 
+  X, 
+  Menu,
+  Sparkles, 
+  ShieldCheck, 
+  ChevronLeft, 
+  ChevronRight, 
+  HelpCircle, 
+  AlertTriangle, 
+  Film, 
+  Image as ImageIcon,
+  Award,
+  BookOpen,
+  Sun,
+  Moon
+} from 'lucide-react';
+import { db, User, Schedule, Report } from '../lib/db';
 import StudentManagement from './StudentManagement';
+import ScheduleManager from './ScheduleManager';
+import AttendanceLogs from './AttendanceLogs';
+import Settings from './Settings';
+import TextType from './TextType';
 import confetti from 'canvas-confetti';
 
 interface TeacherDashboardProps {
@@ -12,15 +38,61 @@ interface TeacherDashboardProps {
   schedules: Schedule[];
   logs: Report[];
   onActionComplete: () => void;
+  onLogout: () => void;
+  supabaseConnected: boolean;
+  onProfileUpdate: (updatedUser: User) => void;
 }
 
-export default function TeacherDashboard({ currentUser, students, schedules, logs, onActionComplete }: TeacherDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'verify' | 'students' | 'calendar'>('verify');
+export default function TeacherDashboard({ 
+  currentUser, 
+  students, 
+  schedules, 
+  logs, 
+  onActionComplete, 
+  onLogout,
+  supabaseConnected,
+  onProfileUpdate
+}: TeacherDashboardProps) {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'schedule' | 'history' | 'settings'>('dashboard');
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsDark(document.documentElement.classList.contains('dark') || localStorage.getItem('cmon_theme') === 'dark');
+      const handleThemeChange = () => {
+        setIsDark(document.documentElement.classList.contains('dark'));
+      };
+      window.addEventListener('cmon-theme-change', handleThemeChange);
+      return () => window.removeEventListener('cmon-theme-change', handleThemeChange);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextMode = !isDark;
+    setIsDark(nextMode);
+    if (typeof window !== 'undefined') {
+      if (nextMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('cmon_theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('cmon_theme', 'light');
+      }
+      window.dispatchEvent(new Event('cmon-theme-change'));
+    }
+  };
+
+  const handleTabClick = (tab: 'dashboard' | 'students' | 'schedule' | 'history' | 'settings') => {
+    setActiveTab(tab);
+    setIsMobileOpen(false);
+  };
 
   // Calendar States
   const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(4); // 0-indexed, so 4 = May
+  const [currentMonth, setCurrentMonth] = useState(4); // May
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
@@ -29,16 +101,27 @@ export default function TeacherDashboard({ currentUser, students, schedules, log
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
 
-  // Auto-select today or first log on mount
   useEffect(() => {
     const today = new Date();
     setCurrentYear(today.getFullYear());
     setCurrentMonth(today.getMonth());
   }, []);
 
-  const pendingReports = logs.filter(l => l.status === 'pending');
+  const pendingReports = useMemo(() => logs.filter(l => l.status === 'pending'), [logs]);
+  const verifiedReports = useMemo(() => logs.filter(l => l.status === 'verified'), [logs]);
+  const rejectedReports = useMemo(() => logs.filter(l => l.status === 'rejected'), [logs]);
 
-  // Teacher Approval Actions
+  // Ratios for Visual Neubrutalist Charts
+  const statsChartData = useMemo(() => {
+    const total = logs.length || 1;
+    return {
+      verifiedPct: Math.round((verifiedReports.length / total) * 100),
+      pendingPct: Math.round((pendingReports.length / total) * 100),
+      rejectedPct: Math.round((rejectedReports.length / total) * 100)
+    };
+  }, [logs, verifiedReports, pendingReports, rejectedReports]);
+
+  // Verification approvals handler
   const handleVerify = async (reportId: number, status: 'verified' | 'rejected') => {
     setVerifyingId(reportId);
     try {
@@ -46,10 +129,10 @@ export default function TeacherDashboard({ currentUser, students, schedules, log
       if (success) {
         if (status === 'verified') {
           confetti({
-            particleCount: 200,
-            spread: 90,
-            origin: { y: 0.5 },
-            colors: ['#4ADE80', '#FACC15', '#22D3EE']
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: ['#4ADE80', '#FACC15', '#EC4899']
           });
         }
         onActionComplete();
@@ -63,21 +146,20 @@ export default function TeacherDashboard({ currentUser, students, schedules, log
     }
   };
 
-  // Helper to parse serialized media URLs (JSON structure fallback)
+  // Helper to parse Base64 attachments
   const parseMedia = (imagePath: string): { photos: string[]; video: string | null } => {
     try {
       if (imagePath.startsWith('{')) {
         const parsed = JSON.parse(imagePath);
         return {
-          photos: parsed.photos || [],
+          photos: (parsed.photos || []).slice(0, 3), // Max 3 photos
           video: parsed.video || null,
         };
       }
     } catch (e) {
-      console.warn('Failed to parse JSON media from image_path, using raw string:', e);
+      console.warn('Failed parse:', e);
     }
     
-    // Fallback: check if it's a video file or preset image
     const isVideo = imagePath.endsWith('.mp4') || imagePath.startsWith('data:video');
     return {
       photos: isVideo ? [] : [imagePath],
@@ -85,11 +167,7 @@ export default function TeacherDashboard({ currentUser, students, schedules, log
     };
   };
 
-  // ==========================================
-  // CUSTOM CALENDAR COMPONENT CALCULATIONS
-  // ==========================================
-  
-  // Navigate Months
+  // Calendar navigations
   const prevMonth = () => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
@@ -112,369 +190,574 @@ export default function TeacherDashboard({ currentUser, students, schedules, log
     setSelectedReport(null);
   };
 
-  // Generate days in month
   const calendarCells = useMemo(() => {
     const cells = [];
-    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // Day of week (0=Sunday, 1=Monday...)
-    const numDays = new Date(currentYear, currentMonth + 1, 0).getDate(); // Days in current month
-
-    // Indonesian Calendar adjustment: Monday is 1st column, Sunday is last column
-    // Standard getDay() is 0=Sun, 1=Mon, 2=Tue...
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+    const numDays = new Date(currentYear, currentMonth + 1, 0).getDate();
     const padCells = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
 
-    // Pad prior month cells
     for (let i = 0; i < padCells; i++) {
       cells.push({ day: null, dateStr: null });
     }
-
-    // Month days
     for (let day = 1; day <= numDays; day++) {
       const dd = String(day).padStart(2, '0');
       const mm = String(currentMonth + 1).padStart(2, '0');
       const dateStr = `${currentYear}-${mm}-${dd}`;
       cells.push({ day, dateStr });
     }
-
     return cells;
   }, [currentYear, currentMonth]);
 
   const handleCellClick = (dateStr: string | null) => {
     if (!dateStr) return;
     setSelectedDateStr(dateStr);
-    
-    // Find if a report exists for this date
     const reportOnDate = logs.find(l => l.date === dateStr);
     setSelectedReport(reportOnDate || null);
   };
 
+  if (!currentUser) return null;
+
   return (
-    <div className="mx-auto max-w-6xl p-4 font-sans md:p-6 animate-fade-in">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#fbfbf8] font-sans text-black">
       
-      {/* Dynamic Tab Switcher */}
-      <div className="mb-6 border-4 border-black bg-white p-2 shadow-[4px_4px_0px_0px_#000000] flex gap-2">
-        <button
-          onClick={() => setActiveTab('verify')}
-          className={`flex-1 py-3 text-xs font-black uppercase border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeTab === 'verify' ? 'bg-cyan-300 translate-x-0.5 shadow-none' : 'bg-white'
-          }`}
+      {/* Mobile Top Header Navigation */}
+      <header className="lg:hidden flex items-center justify-between border-b-4 border-black bg-white px-4 py-3 sticky top-0 z-40 w-full shrink-0">
+        <button 
+          onClick={() => { setActiveTab('dashboard'); setIsMobileOpen(false); }} 
+          className="flex items-center gap-2 text-lg font-black tracking-wider text-black cursor-pointer"
         >
-          <ClipboardList className="h-4 w-4 stroke-[3px]" />
-          VERIFIKASI ({pendingReports.length})
+          <span className="flex h-8 w-8 items-center justify-center border-2 border-black bg-yellow-300 text-sm font-bold shadow-[1.5px_1.5px_0px_0px_#000000]">
+            ⚡
+          </span>
+          <span>C-MON PIKET</span>
         </button>
-
+        
         <button
-          onClick={() => setActiveTab('students')}
-          className={`flex-1 py-3 text-xs font-black uppercase border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeTab === 'students' ? 'bg-purple-300 translate-x-0.5 shadow-none' : 'bg-white'
-          }`}
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="flex h-10 w-10 items-center justify-center border-2 border-black bg-white text-black shadow-[2px_2px_0px_0px_#000000] hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
         >
-          <Users className="h-4 w-4 stroke-[3px]" />
-          KELOLA SISWA
+          {isMobileOpen ? <X className="h-5 w-5 stroke-[3px]" /> : <Menu className="h-5 w-5 stroke-[3px]" />}
         </button>
+      </header>
 
-        <button
-          onClick={() => setActiveTab('calendar')}
-          className={`flex-1 py-3 text-xs font-black uppercase border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeTab === 'calendar' ? 'bg-green-300 translate-x-0.5 shadow-none' : 'bg-white'
-          }`}
-        >
-          <CalendarIcon className="h-4 w-4 stroke-[3px]" />
-          RIWAYAT KALENDER
-        </button>
-      </div>
-
-      {/* ==========================================
-         TAB 1: REPORTS VERIFICATION DECK
-         ========================================== */}
-      {activeTab === 'verify' && (
-        <div className="border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000]">
-          <h2 className="text-2xl font-black uppercase mb-4 flex items-center gap-2">
-            <ClipboardList className="h-6 w-6 stroke-[3px] text-cyan-500" />
-            Antrean Verifikasi Laporan Piket
-          </h2>
-
-          {pendingReports.length === 0 ? (
-            <div className="border-4 border-dashed border-zinc-200 py-16 text-center">
-              <Sparkles className="mx-auto h-12 w-12 text-zinc-300 stroke-[2px] mb-2" />
-              <p className="text-lg font-black text-zinc-400 uppercase">Semua Laporan Terverifikasi!</p>
-              <p className="text-xs font-bold text-zinc-400 uppercase">Belum ada antrean baru dari siswa piket.</p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {pendingReports.map((report) => {
-                const media = parseMedia(report.image_path);
-                
-                return (
-                  <div
-                    key={report.id}
-                    className="border-4 border-black p-4 bg-zinc-50 shadow-[4px_4px_0px_0px_#000000] flex flex-col justify-between"
-                  >
-                    <div>
-                      {/* Header */}
-                      <div className="flex items-center justify-between border-b border-black pb-2 mb-3 text-[10px] font-black text-zinc-500 uppercase">
-                        <span>TANGGAL: {report.date}</span>
-                        <span className="border border-black bg-yellow-200 px-1.5 py-0.2">PENDING</span>
-                      </div>
-
-                      {/* Photo/Video Grid */}
-                      <div className="space-y-3">
-                        {media.photos.length > 0 && (
-                          <div className={`grid gap-2 ${media.photos.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                            {media.photos.map((src, idx) => (
-                              <div key={idx} className="border border-black h-24 overflow-hidden bg-zinc-950">
-                                <img src={src} alt="Bukti" className="object-cover h-full w-full max-h-24" />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {media.video && (
-                          <div className="border border-black bg-zinc-900 overflow-hidden relative rounded shadow-[2px_2px_0px_0px_#000000] max-h-44 flex items-center justify-center">
-                            <video controls className="w-full h-full max-h-40" src={media.video} />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Info logs */}
-                      <div className="mt-4 space-y-1.5 text-left text-[10px] font-black uppercase text-zinc-900">
-                        <p>Dilaporkan Oleh: <span className="text-cyan-600">{report.reporter_name}</span></p>
-                        
-                        {report.notes && (
-                          <p className="normal-case border-l-4 border-black bg-white border border-zinc-200 p-2 text-zinc-500 italic mt-1 leading-relaxed">
-                            &ldquo;{report.notes}&rdquo;
-                          </p>
-                        )}
-
-                        {/* Attendance present students */}
-                        <div className="mt-3">
-                          <span className="text-[8px] text-zinc-400 block mb-1">PRESENSI REGU PIKET:</span>
-                          <div className="flex flex-wrap gap-1">
-                            {report.details?.map((det) => (
-                              <span
-                                key={det.id}
-                                className={`border px-1.5 py-0.2 text-[8px] font-black ${
-                                  det.is_present === 1 ? 'bg-green-100 border-green-700 text-green-800' : 'bg-red-100 border-red-700 text-red-800'
-                                }`}
-                              >
-                                {det.student_name}: {det.is_present === 1 ? 'HADIR' : 'ABSEN'}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Verifications trigger actions */}
-                    <div className="mt-5 flex gap-3 border-t border-black pt-3">
-                      <button
-                        onClick={() => handleVerify(report.id, 'verified')}
-                        disabled={verifyingId !== null}
-                        className="flex-1 border-2 border-black bg-green-300 py-2 text-xs font-black uppercase text-black shadow-[2px_2px_0px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
-                      >
-                        SETUJUI LAPORAN ✔
-                      </button>
-                      <button
-                        onClick={() => handleVerify(report.id, 'rejected')}
-                        disabled={verifyingId !== null}
-                        className="flex-1 border-2 border-black bg-red-300 py-2 text-xs font-black uppercase text-black shadow-[2px_2px_0px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
-                      >
-                        TOLAK LAPORAN ✕
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ==========================================
-         TAB 2: STUDENT MANAGEMENT CRUD
-         ========================================== */}
-      {activeTab === 'students' && (
-        <StudentManagement
-          currentUser={currentUser}
-          students={students}
-          onActionComplete={onActionComplete}
+      {/* Sidebar Backdrop Overlay on Mobile */}
+      {isMobileOpen && (
+        <div 
+          onClick={() => setIsMobileOpen(false)}
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
         />
       )}
 
       {/* ==========================================
-         TAB 3: CALENDAR HISTORY WITH LOG DETAILS
+         LEFT STICKY SIDEBAR (ADMIN PANELS)
          ========================================== */}
-      {activeTab === 'calendar' && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          
-          {/* Calendar visualizer component */}
-          <div className="lg:col-span-2 border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000]">
-            <div className="flex items-center justify-between border-b-4 border-black pb-4 mb-6">
-              <h2 className="text-2xl font-black uppercase flex items-center gap-2 leading-none">
-                <CalendarIcon className="h-6 w-6 stroke-[3px] text-green-500" />
-                Kalender Riwayat Piket
-              </h2>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={prevMonth}
-                  className="h-9 w-9 border-2 border-black bg-white hover:bg-zinc-100 flex items-center justify-center font-bold shadow-[1.5px_1.5px_0px_0px_#000000] cursor-pointer"
-                >
-                  <ChevronLeft className="h-5 w-5 stroke-[2.5px]" />
-                </button>
-                <span className="border-2 border-black bg-yellow-300 px-3 py-1 text-xs font-black uppercase shadow-[1.5px_1.5px_0px_0px_#000000]">
-                  {monthsIndo[currentMonth]} {currentYear}
-                </span>
-                <button
-                  onClick={nextMonth}
-                  className="h-9 w-9 border-2 border-black bg-white hover:bg-zinc-100 flex items-center justify-center font-bold shadow-[1.5px_1.5px_0px_0px_#000000] cursor-pointer"
-                >
-                  <ChevronRight className="h-5 w-5 stroke-[2.5px]" />
-                </button>
-              </div>
-            </div>
-
-            {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-2 text-center font-black text-[10px] uppercase border-b-2 border-black pb-2 mb-3 bg-zinc-900 text-white p-1">
-              <div>Sen</div>
-              <div>Sel</div>
-              <div>Rab</div>
-              <div>Kam</div>
-              <div>Jum</div>
-              <div className="text-red-400">Sab</div>
-              <div className="text-red-400">Min</div>
-            </div>
-
-            {/* Date cells */}
-            <div className="grid grid-cols-7 gap-2">
-              {calendarCells.map((cell, idx) => {
-                if (!cell.day) {
-                  return <div key={idx} className="h-10 sm:h-12 bg-zinc-50 border border-transparent" />;
-                }
-
-                // Check if a report exists for this cell's date
-                const reportOnDate = logs.find(l => l.date === cell.dateStr);
-                const hasReport = !!reportOnDate;
-                const isVerified = reportOnDate?.status === 'verified';
-                const isSelected = selectedDateStr === cell.dateStr;
-
-                let cellBg = 'bg-white hover:bg-zinc-100';
-                if (hasReport) {
-                  cellBg = isVerified 
-                    ? 'bg-green-300 hover:bg-green-200 text-black border-green-700 shadow-[1.5px_1.5px_0px_0px_#15803d]' 
-                    : 'bg-yellow-300 hover:bg-yellow-200 text-black border-yellow-700 shadow-[1.5px_1.5px_0px_0px_#a16207]';
-                }
-
-                if (isSelected) {
-                  cellBg += ' scale-105 border-4 border-black z-10 shadow-none translate-x-0.5 translate-y-0.5';
-                }
-
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handleCellClick(cell.dateStr)}
-                    className={`h-10 sm:h-12 border-2 border-black flex flex-col items-center justify-between p-1 font-black transition-all cursor-pointer text-xs ${cellBg}`}
-                  >
-                    <span>{cell.day}</span>
-                    {hasReport && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-black shrink-0" />
-                    )}
-                  </button>
-                );
-              })}
+      <aside className={`w-64 border-r-4 border-black bg-white flex flex-col justify-between z-50 shrink-0 transition-transform duration-300 fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 lg:translate-x-0 ${
+        isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
+        <div>
+          {/* Logo Header */}
+          <div className="border-b-4 border-black p-5 bg-yellow-300 flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center border-4 border-black bg-white text-lg font-bold shadow-[1.5px_1.5px_0px_0px_#000000]">
+              ⚡
+            </span>
+            <div className="text-left leading-none">
+              <h1 className="text-lg font-black tracking-tight uppercase leading-none">C-MON PIKET</h1>
+              <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest mt-0.5 inline-block">Dashboard admin</span>
             </div>
           </div>
 
-          {/* Log Details Display (Rendered below/beside calendar) */}
-          <div className="border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000]">
-            <h2 className="text-xl font-black uppercase mb-4 border-b-2 border-black pb-2 flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-yellow-500 stroke-[3px]" />
-              Detail Riwayat Hari
-            </h2>
+          {/* Navigation Links */}
+          <nav className="p-4 space-y-2">
+            <button
+              onClick={() => handleTabClick('dashboard')}
+              className={`w-full py-2.5 px-4 text-xs font-black uppercase text-left flex items-center gap-3 border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer ${
+                activeTab === 'dashboard' ? 'bg-cyan-300 translate-x-0.5 shadow-none' : 'bg-white'
+              }`}
+            >
+              <LayoutDashboard className="h-4.5 w-4.5 stroke-[3px]" />
+              DASHBOARD
+            </button>
 
-            {!selectedDateStr ? (
-              <div className="py-12 text-center text-zinc-400 font-bold border-2 border-dashed border-zinc-200">
-                <HelpCircle className="mx-auto h-10 w-10 stroke-[2px] mb-2 opacity-50" />
-                <p className="text-xs uppercase">PILIH TANGGAL DI KALENDER</p>
-                <p className="text-[10px] text-zinc-400 mt-1">HARI HIJAU MEMILIKI LAPORAN PIKET KELAS</p>
-              </div>
-            ) : (
-              <div>
-                <div className="mb-4 bg-zinc-50 border-2 border-black p-3 text-xs font-black uppercase flex items-center justify-between">
-                  <span>TANGGAL: {selectedDateStr}</span>
-                  <span className="bg-yellow-300 border border-black px-1.5 py-0.2">
-                    {selectedReport ? (selectedReport.status === 'verified' ? 'DISETUJUI' : 'PENDING') : 'KOSONG'}
-                  </span>
+            <button
+              onClick={() => handleTabClick('students')}
+              className={`w-full py-2.5 px-4 text-xs font-black uppercase text-left flex items-center gap-3 border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer ${
+                activeTab === 'students' ? 'bg-purple-300 translate-x-0.5 shadow-none' : 'bg-white'
+              }`}
+            >
+              <Users className="h-4.5 w-4.5 stroke-[3px]" />
+              KELOLA SISWA
+            </button>
+
+            <button
+              onClick={() => handleTabClick('schedule')}
+              className={`w-full py-2.5 px-4 text-xs font-black uppercase text-left flex items-center gap-3 border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer ${
+                activeTab === 'schedule' ? 'bg-pink-300 translate-x-0.5 shadow-none' : 'bg-white'
+              }`}
+            >
+              <CalendarIcon className="h-4.5 w-4.5 stroke-[3px]" />
+              KELOLA JADWAL PIKET
+            </button>
+
+            <button
+              onClick={() => handleTabClick('history')}
+              className={`w-full py-2.5 px-4 text-xs font-black uppercase text-left flex items-center gap-3 border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer ${
+                activeTab === 'history' ? 'bg-green-300 translate-x-0.5 shadow-none' : 'bg-white'
+              }`}
+            >
+              <ClipboardList className="h-4.5 w-4.5 stroke-[3px]" />
+              RIWAYAT PIKET
+            </button>
+
+            <button
+              onClick={() => handleTabClick('settings')}
+              className={`w-full py-2.5 px-4 text-xs font-black uppercase text-left flex items-center gap-3 border-2 border-black transition-all shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 hover:shadow-none cursor-pointer ${
+                activeTab === 'settings' ? 'bg-amber-300 translate-x-0.5 shadow-none' : 'bg-white'
+              }`}
+            >
+              <SettingsIcon className="h-4.5 w-4.5 stroke-[3px]" />
+              PROFIL & SETELAN
+            </button>
+          </nav>
+        </div>
+
+        {/* Sidebar bottom */}
+        <div className="p-4 border-t-2 border-black bg-zinc-50 space-y-3">
+          <div className="flex items-center gap-2 text-[9px] font-black uppercase text-zinc-500">
+            <div className={`h-2.5 w-2.5 rounded-full border border-black ${supabaseConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+            <span>{supabaseConnected ? 'SUPABASE CONNECTED' : 'OFFLINE MODE'}</span>
+          </div>
+
+          <button
+            onClick={toggleTheme}
+            className="w-full border-2 border-black bg-yellow-300 p-2 text-xs font-black uppercase text-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 active:shadow-none cursor-pointer flex items-center justify-center gap-2"
+          >
+            {isDark ? <Sun className="h-4 w-4 stroke-[3px]" /> : <Moon className="h-4 w-4 stroke-[3px]" />}
+            <span>{isDark ? 'MODE TERANG' : 'MODE GELAP'}</span>
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="w-full border-2 border-black bg-red-400 p-2 text-xs font-black uppercase text-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-0.5 active:shadow-none cursor-pointer flex items-center justify-center gap-2"
+          >
+            <LogOut className="h-4 w-4 stroke-[3px]" />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* ==========================================
+         RIGHT CONTENT SCROLLER AREA
+         ========================================== */}
+      <main className="flex-1 p-4 md:p-6 lg:overflow-y-auto lg:h-screen w-full max-w-full">
+
+        {/* 1. DASHBOARD TAB VIEW */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            
+            {/* Header Greeting Banner */}
+            <div className="border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div 
+                  onClick={() => setActiveTab('settings')}
+                  className="h-28 w-28 rounded-full border-4 border-black overflow-hidden shadow-[4px_4px_0px_0px_#000000] hover:scale-105 transition-transform shrink-0 bg-yellow-100 flex items-center justify-center cursor-pointer"
+                >
+                  {currentUser.photo_url ? (
+                    <img src={currentUser.photo_url} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-12 w-12 stroke-[2px]" />
+                  )}
                 </div>
-
-                {!selectedReport ? (
-                  <div className="py-8 text-center text-zinc-400 font-bold border border-dashed border-zinc-200">
-                    <AlertTriangle className="mx-auto h-8 w-8 stroke-[2px] mb-1 text-zinc-300" />
-                    <p className="text-xs uppercase">Tidak ada laporan piket</p>
+                <div>
+                  <div className="text-2xl font-black flex items-center gap-1.5 leading-none">
+                    <span>Halo Ibu/Bapak,</span>
+                    <TextType 
+                      text={currentUser.name} 
+                      showCursor={true} 
+                      typingSpeed={80} 
+                      loop={false}
+                      className="text-cyan-500 font-black"
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-1 text-[10px] font-black uppercase text-zinc-800">
-                      <p>Dilaporkan Oleh: <span className="text-cyan-600">{selectedReport.reporter_name}</span></p>
-                      
-                      {selectedReport.notes && (
-                        <p className="normal-case bg-zinc-50 border border-zinc-200 p-2 font-bold text-zinc-500 italic mt-1">
-                          &ldquo;{selectedReport.notes}&rdquo;
-                        </p>
-                      )}
-                    </div>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase mt-1">
+                    Selamat datang di Dasbor Guru Kelas XI-J SMA Yadika 11
+                  </p>
+                </div>
+              </div>
 
-                    {/* Photos slider inside details */}
-                    <div>
-                      <span className="text-[9px] font-black text-zinc-400 uppercase block mb-1">Galeri Foto Bukti:</span>
-                      {(() => {
-                        const media = parseMedia(selectedReport.image_path);
+              <div className="border-2 border-black bg-yellow-300 px-3.5 py-1.5 text-xs font-black uppercase shadow-[2.5px_2.5px_0px_0px_#000000]">
+                SMA YADIKA 11 🏫
+              </div>
+            </div>
+
+            {/* Neubrutalist Analytics Charts Block */}
+            <div className="grid gap-6 md:grid-cols-4">
+              
+              {/* Counters */}
+              <div className="border-4 border-black bg-emerald-100 p-4 shadow-[4px_4px_0px_0px_#000000] text-left">
+                <span className="text-[9px] font-black text-emerald-800 uppercase block mb-1">LOGS TERVERIFIKASI</span>
+                <span className="text-4xl font-black text-black leading-none">{verifiedReports.length}</span>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase block mt-1">LAPORAN DI-ACCEPT GURU</span>
+              </div>
+
+              <div className="border-4 border-black bg-yellow-100 p-4 shadow-[4px_4px_0px_0px_#000000] text-left">
+                <span className="text-[9px] font-black text-yellow-800 uppercase block mb-1">ANTREAN PENDING</span>
+                <span className="text-4xl font-black text-black leading-none">{pendingReports.length}</span>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase block mt-1">BUTUH APPROVAL GURU</span>
+              </div>
+
+              <div className="border-4 border-black bg-red-100 p-4 shadow-[4px_4px_0px_0px_#000000] text-left">
+                <span className="text-[9px] font-black text-red-800 uppercase block mb-1">LOGS DITOLAK</span>
+                <span className="text-4xl font-black text-black leading-none">{rejectedReports.length}</span>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase block mt-1">TIDAK LOLOS VERIFIKASI</span>
+              </div>
+
+              {/* Neubrutalist ratio progress bar chart */}
+              <div className="border-4 border-black bg-white p-4 shadow-[4px_4px_0px_0px_#000000] flex flex-col justify-center gap-2">
+                <span className="text-[9px] font-black text-zinc-900 uppercase block">Rasio Kebersihan Kelas (%)</span>
+                <div className="h-6 w-full border-2 border-black flex overflow-hidden bg-zinc-100 shadow-[1px_1px_0px_0px_#000000]">
+                  <div style={{ width: `${statsChartData.verifiedPct}%` }} className="bg-emerald-400 h-full border-r-2 border-black" title="Verified" />
+                  <div style={{ width: `${statsChartData.pendingPct}%` }} className="bg-yellow-300 h-full border-r-2 border-black" title="Pending" />
+                  <div style={{ width: `${statsChartData.rejectedPct}%` }} className="bg-red-400 h-full" title="Rejected" />
+                </div>
+                <div className="flex justify-between text-[8px] font-black uppercase text-zinc-500">
+                  <span className="text-emerald-700">ACC: {statsChartData.verifiedPct}%</span>
+                  <span className="text-yellow-700">PEND: {statsChartData.pendingPct}%</span>
+                  <span className="text-red-700">REJ: {statsChartData.rejectedPct}%</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Big Verification Table Deck */}
+            <div className="border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000]">
+              <h2 className="text-2xl font-black uppercase mb-4 flex items-center gap-2 text-cyan-600">
+                <ClipboardList className="h-6 w-6 stroke-[3px]" />
+                Verifikasi Laporan Hari Ini
+              </h2>
+
+              {pendingReports.length === 0 ? (
+                <div className="border-4 border-dashed border-zinc-200 py-10 text-center">
+                  <span className="text-3xl animate-pulse block mb-1.5">✨</span>
+                  <p className="text-sm font-black text-zinc-400 uppercase">Semua Laporan Piket Bersih!</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase">Belum ada antrean verifikasi baru dari siswa.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto border-4 border-black shadow-[3px_3px_0px_0px_#000000]">
+                  <table className="w-full text-left border-collapse bg-white">
+                    <thead>
+                      <tr className="border-b-4 border-black bg-zinc-900 text-white text-[10px] font-black uppercase">
+                        <th className="p-3 border-r-2 border-black">Tanggal</th>
+                        <th className="p-3 border-r-2 border-black">Reporter (PJ)</th>
+                        <th className="p-3 border-r-2 border-black">Bukti Kebersihan</th>
+                        <th className="p-3 border-r-2 border-black">Catatan Roster</th>
+                        <th className="p-3 border-r-2 border-black">Rincian Presensi</th>
+                        <th className="p-3 text-center">Aksi Verifikasi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y-2 divide-black">
+                      {pendingReports.map((report) => {
+                        const media = parseMedia(report.image_path);
                         return (
-                          <div className="space-y-3">
-                            {media.photos.length > 0 && (
-                              <div className="grid gap-2 grid-cols-2">
-                                {media.photos.map((src, i) => (
-                                  <div key={i} className="border border-black h-24 overflow-hidden bg-zinc-950 rounded shadow-[1.5px_1.5px_0px_0px_#000000]">
-                                    <img src={src} alt="Bukti Kalender" className="object-cover h-full w-full max-h-24 max-w-full" />
+                          <tr key={report.id} className="text-[10px] font-black uppercase hover:bg-zinc-50 transition-colors">
+                            
+                            <td className="p-3 border-r-2 border-black text-zinc-500 whitespace-nowrap">{report.date}</td>
+                            
+                            <td className="p-3 border-r-2 border-black text-cyan-600">{report.reporter_name}</td>
+                            
+                            <td className="p-3 border-r-2 border-black min-w-44">
+                              <div className="space-y-2">
+                                {media.photos.length > 0 && (
+                                  <div className="grid grid-cols-3 gap-1">
+                                    {media.photos.map((src, i) => (
+                                      <div key={i} className="border border-black h-10 w-10 overflow-hidden bg-zinc-950">
+                                        <img src={src} alt="Verify Preview" className="object-cover h-full w-full" />
+                                      </div>
+                                    ))}
                                   </div>
+                                )}
+                                {media.video && (
+                                  <div className="flex items-center gap-1 border border-black bg-zinc-100 p-1 w-fit">
+                                    <Film className="h-3.5 w-3.5 stroke-[2.5px] text-pink-500" />
+                                    <span className="text-[7px]">LAMPIRAN VIDEO</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            
+                            <td className="p-3 border-r-2 border-black normal-case text-zinc-500 italic max-w-44 truncate" title={report.notes || ''}>
+                              {report.notes ? `"${report.notes}"` : '-'}
+                            </td>
+
+                            <td className="p-3 border-r-2 border-black min-w-36">
+                              <div className="flex flex-wrap gap-1">
+                                {report.details?.map((det) => (
+                                  <span
+                                    key={det.id}
+                                    className={`border px-1.5 py-0.2 text-[8px] font-black ${
+                                      det.is_present === 1 ? 'bg-green-100 border-green-700 text-green-800' : 'bg-red-100 border-red-700 text-red-800'
+                                    }`}
+                                  >
+                                    {det.student_name}: {det.is_present === 1 ? 'H' : 'A'}
+                                  </span>
                                 ))}
                               </div>
-                            )}
-                            
-                            {media.video && (
-                              <div className="mt-2 border-2 border-black bg-zinc-900 rounded overflow-hidden shadow-[2px_2px_0px_0px_#000000] max-h-44 flex items-center justify-center">
-                                <video controls className="w-full h-full max-h-40" src={media.video} />
+                            </td>
+
+                            <td className="p-3 text-center min-w-40">
+                              <div className="flex gap-2 justify-center">
+                                <button
+                                  onClick={() => handleVerify(report.id, 'verified')}
+                                  disabled={verifyingId !== null}
+                                  className="border-2 border-black bg-green-300 px-2 py-1 shadow-[1.5px_1.5px_0px_0px_#000000] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+                                >
+                                  ✔ SETUJUI
+                                </button>
+                                <button
+                                  onClick={() => handleVerify(report.id, 'rejected')}
+                                  disabled={verifyingId !== null}
+                                  className="border-2 border-black bg-red-300 px-2 py-1 shadow-[1.5px_1.5px_0px_0px_#000000] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+                                >
+                                  ✕ TOLAK
+                                </button>
                               </div>
-                            )}
-                          </div>
+                            </td>
+
+                          </tr>
                         );
-                      })()}
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Calendar Log History with Details */}
+            <div className="grid gap-6 lg:grid-cols-5">
+              
+              {/* Green-highlight Calendar */}
+              <div className="lg:col-span-3 border-4 border-black bg-white p-8 shadow-[8px_8px_0px_0px_#000000]">
+                <div className="flex items-center justify-between border-b-4 border-black pb-4 mb-4">
+                  <h2 className="text-2xl font-black uppercase flex items-center gap-2">
+                    <CalendarIcon className="h-6 w-6 text-emerald-500 stroke-[3px]" />
+                    Kalender Riwayat Piket
+                  </h2>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={prevMonth}
+                      className="h-9 w-9 border-2 border-black bg-white hover:bg-zinc-100 flex items-center justify-center shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
+                    >
+                      <ChevronLeft className="h-5 w-5 stroke-[3px]" />
+                    </button>
+                    <span className="border-2 border-black bg-yellow-300 px-3 py-1 text-xs font-black uppercase shadow-[1px_1px_0px_0px_#000000]">
+                      {monthsIndo[currentMonth]} {currentYear}
+                    </span>
+                    <button
+                      onClick={nextMonth}
+                      className="h-9 w-9 border-2 border-black bg-white hover:bg-zinc-100 flex items-center justify-center shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
+                    >
+                      <ChevronRight className="h-5 w-5 stroke-[3px]" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1.5 text-center font-black text-[11px] sm:text-xs uppercase border-b border-black pb-2 mb-3 bg-zinc-900 text-white p-1.5">
+                  <div>Sen</div>
+                  <div>Sel</div>
+                  <div>Rab</div>
+                  <div>Kam</div>
+                  <div>Jum</div>
+                  <div className="text-red-400">Sab</div>
+                  <div className="text-red-400">Min</div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1.5">
+                  {calendarCells.map((cell, idx) => {
+                    if (!cell.day) {
+                      return <div key={idx} className="h-16 bg-zinc-50 border border-transparent" />;
+                    }
+
+                    const reportOnDate = logs.find(l => l.date === cell.dateStr);
+                    const hasReport = !!reportOnDate;
+                    const isVerified = reportOnDate?.status === 'verified';
+                    const isSelected = selectedDateStr === cell.dateStr;
+
+                    let cellBg = 'bg-white hover:bg-zinc-100';
+                    if (hasReport) {
+                      cellBg = isVerified 
+                        ? 'bg-green-300 hover:bg-green-200 border-green-700 text-black shadow-[1px_1px_0px_0px_#16a34a]' 
+                        : 'bg-yellow-300 hover:bg-yellow-200 border-yellow-700 text-black shadow-[1px_1px_0px_0px_#ca8a04]';
+                    }
+
+                    if (isSelected) {
+                      cellBg += ' scale-105 border-4 border-black shadow-none translate-x-0.5 z-10';
+                    }
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleCellClick(cell.dateStr)}
+                        className={`h-16 border-2 border-black flex flex-col items-center justify-between p-2 font-black transition-all cursor-pointer text-sm sm:text-base ${cellBg}`}
+                      >
+                        <span>{cell.day}</span>
+                        {hasReport && <span className="h-1.5 w-1.5 rounded-full bg-black shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Clicked Day Report Details */}
+              <div className="lg:col-span-2 border-4 border-black bg-white p-8 shadow-[8px_8px_0px_0px_#000000]">
+                <h2 className="text-lg font-black uppercase mb-4 border-b-2 border-black pb-1.5 flex items-center gap-2">
+                  <Award className="h-5 w-5 text-amber-500 stroke-[3px]" />
+                  Detail Riwayat Hari
+                </h2>
+
+                {!selectedDateStr ? (
+                  <div className="py-12 text-center text-zinc-400 font-bold border-2 border-dashed border-zinc-200">
+                    <HelpCircle className="mx-auto h-8 w-8 stroke-[2px] mb-2 opacity-50" />
+                    <p className="text-[10px] uppercase">PILIH TANGGAL DI KALENDER</p>
+                    <p className="text-[8px] text-zinc-400 mt-1 uppercase">HARI HIJAU MEMILIKI LAPORAN PIKET KELAS</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-4 bg-zinc-50 border border-black p-3.5 text-xs font-black uppercase flex items-center justify-between">
+                      <span>TANGGAL: {selectedDateStr}</span>
+                      <span className="bg-yellow-300 border border-black px-2 py-0.5">
+                        {selectedReport ? (selectedReport.status === 'verified' ? 'DISETUJUI' : 'PENDING') : 'KOSONG'}
+                      </span>
                     </div>
 
-                    {/* Present/Absent list */}
-                    {selectedReport.details && (
-                      <div>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase block mb-1">Presensi Anggota Piket:</span>
-                        <div className="space-y-1 max-h-28 overflow-y-auto">
-                          {selectedReport.details.map((det) => (
-                            <div
-                              key={det.id}
-                              className={`border px-2 py-1 text-[9px] font-black uppercase flex items-center justify-between ${
-                                det.is_present === 1 ? 'bg-green-50 border-green-600 text-green-700' : 'bg-red-50 border-red-600 text-red-700'
-                              }`}
-                            >
-                              <span>{det.student_name}</span>
-                              <span>{det.is_present === 1 ? 'HADIR' : 'ABSEN'}</span>
-                            </div>
-                          ))}
+                    {!selectedReport ? (
+                      <div className="py-12 text-center text-zinc-400 font-bold border border-dashed border-zinc-200">
+                        <AlertTriangle className="mx-auto h-9 w-9 stroke-[2px] mb-2 text-zinc-300" />
+                        <p className="text-xs uppercase">Tidak ada laporan piket</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        <div className="space-y-1 text-[11px] sm:text-xs font-black uppercase text-zinc-800">
+                          <p>Dilaporkan Oleh: <span className="text-cyan-600">{selectedReport.reporter_name}</span></p>
+                          {selectedReport.notes && (
+                            <p className="normal-case bg-zinc-50 border border-zinc-200 p-3 text-xs font-bold text-zinc-600 italic mt-1.5 leading-relaxed">
+                              &ldquo;{selectedReport.notes}&rdquo;
+                            </p>
+                          )}
                         </div>
+
+                        {/* Media display */}
+                        <div>
+                          <span className="text-[10px] sm:text-xs font-black text-zinc-500 uppercase block mb-1.5">Bukti Kebersihan (Max 3 Foto):</span>
+                          {(() => {
+                            const media = parseMedia(selectedReport.image_path);
+                            return (
+                              <div className="space-y-2">
+                                {media.photos.length > 0 && (
+                                  <div className="grid gap-2.5 grid-cols-3">
+                                    {media.photos.map((src, i) => (
+                                      <div 
+                                        key={i} 
+                                        onClick={() => setZoomPhoto(src)}
+                                        className="border border-black h-28 overflow-hidden bg-zinc-950 rounded shadow-[1px_1px_0px_0px_#000000] cursor-pointer hover:scale-105 transition-transform"
+                                      >
+                                        <img src={src} alt="Bukti Rinci" className="object-cover h-full w-full" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {media.video && (
+                                  <div className="border border-black bg-zinc-900 rounded overflow-hidden max-h-48 flex items-center justify-center">
+                                    <video controls playsInline className="w-full h-full max-h-44" src={media.video} />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Attendance present students */}
+                        {selectedReport.details && (
+                          <div>
+                            <span className="text-[10px] sm:text-xs font-black text-zinc-500 uppercase block mb-2">Presensi Anggota Piket:</span>
+                            <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                              {selectedReport.details.map((det) => (
+                                <div
+                                  key={det.id}
+                                  className={`border p-1.5 text-[10px] font-black uppercase flex items-center justify-between ${
+                                    det.is_present === 1 ? 'bg-green-50 border-green-600 text-green-700' : 'bg-red-50 border-red-600 text-red-700'
+                                  }`}
+                                >
+                                  <span>{det.student_name}</span>
+                                  <span>{det.is_present === 1 ? 'Hadir' : 'Absen'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
 
+            </div>
+
+          </div>
+        )}
+
+        {/* 2. KELOLA SISWA TAB VIEW */}
+        {activeTab === 'students' && (
+          <StudentManagement 
+            currentUser={currentUser}
+            students={students}
+            onActionComplete={onActionComplete}
+          />
+        )}
+
+        {/* 3. KELOLA JADWAL PIKET TAB VIEW */}
+        {activeTab === 'schedule' && (
+          <ScheduleManager 
+            currentUser={currentUser}
+            students={students}
+            schedules={schedules}
+            onActionComplete={onActionComplete}
+          />
+        )}
+
+        {/* 4. RIWAYAT PIKET TAB VIEW */}
+        {activeTab === 'history' && (
+          <AttendanceLogs 
+            logs={logs}
+          />
+        )}
+
+        {/* 5. PROFIL & SECURITY TAB VIEW */}
+        {activeTab === 'settings' && (
+          <Settings 
+            currentUser={currentUser}
+            onProfileUpdate={onProfileUpdate}
+            onLogout={onLogout}
+          />
+        )}
+
+      </main>
+
+      {/* Neubrutalist Zoom Modal for Calendar Details */}
+      {zoomPhoto && (
+        <div 
+          onClick={() => setZoomPhoto(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 cursor-pointer"
+        >
+          <div className="relative border-4 border-black bg-white p-2 shadow-[8px_8px_0px_0px_#000000] max-w-3xl max-h-[85vh] overflow-hidden animate-scale-in">
+            <img src={zoomPhoto} alt="Zoom Bukti Piket" className="max-w-full max-h-[75vh] object-contain" />
+            <button
+              onClick={() => setZoomPhoto(null)}
+              className="absolute top-4 right-4 bg-red-400 text-black border-2 border-black px-3.5 py-1 font-black text-xs uppercase shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
+            >
+              TUTUP
+            </button>
+          </div>
         </div>
       )}
 
