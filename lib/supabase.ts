@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Configuration keys for local storage overrides
 export const SUPABASE_URL_KEY = 'cmon_piket_supabase_url';
@@ -41,11 +41,21 @@ export function getSupabaseConfig(): SupabaseConfig {
   return { url, anonKey, source };
 }
 
+let cachedClient: SupabaseClient | null = null;
+let cachedUrl: string | null = null;
+let cachedKey: string | null = null;
+
 export function getSupabaseClient() {
   const { url, anonKey } = getSupabaseConfig();
   if (url && anonKey) {
+    if (cachedClient && cachedUrl === url && cachedKey === anonKey) {
+      return cachedClient;
+    }
     try {
-      return createClient(url, anonKey);
+      cachedClient = createClient(url, anonKey);
+      cachedUrl = url;
+      cachedKey = anonKey;
+      return cachedClient;
     } catch (e) {
       console.error('Failed to create Supabase client:', e);
       return null;

@@ -748,7 +748,8 @@ CREATE TABLE IF NOT EXISTS public.reports (
     reporter_id INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
     image_path TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT reports_status_check CHECK (status = ANY (ARRAY['pending'::text, 'verified'::text, 'rejected'::text]))
 );
 
 -- Enable RLS & Policies
