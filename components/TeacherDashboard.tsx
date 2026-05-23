@@ -58,6 +58,7 @@ export default function TeacherDashboard({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(false);
+  const [rejectionReasons, setRejectionReasons] = useState<{ [reportId: number]: string }>({});
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -123,9 +124,40 @@ export default function TeacherDashboard({
 
   // Verification approvals handler
   const handleVerify = async (reportId: number, status: 'verified' | 'rejected') => {
+    let updatedImagePath: string | undefined;
+
+    if (status === 'rejected') {
+      const reason = rejectionReasons[reportId]?.trim();
+      if (!reason) {
+        alert('Mohon tuliskan alasan penolakan terlebih dahulu pada kotak teks di bawah sebelum menolak laporan piket!');
+        return;
+      }
+      
+      // Find the report to preserve photos & video payload
+      const report = logs.find(r => r.id === reportId);
+      if (report) {
+        try {
+          let mediaPayload: any = {};
+          if (report.image_path.startsWith('{')) {
+            mediaPayload = JSON.parse(report.image_path);
+          } else {
+            const isVideo = report.image_path.endsWith('.mp4') || report.image_path.startsWith('data:video');
+            mediaPayload = {
+              photos: isVideo ? [] : [report.image_path],
+              video: isVideo ? report.image_path : null
+            };
+          }
+          mediaPayload.rejectionReason = reason;
+          updatedImagePath = JSON.stringify(mediaPayload);
+        } catch (err) {
+          console.warn('Failed parsing existing image_path:', err);
+        }
+      }
+    }
+
     setVerifyingId(reportId);
     try {
-      const success = await db.verifyReport(reportId, status);
+      const success = await db.verifyReport(reportId, status, updatedImagePath);
       if (success) {
         if (status === 'verified') {
           confetti({
@@ -141,19 +173,21 @@ export default function TeacherDashboard({
       }
     } catch (e) {
       console.error(e);
+      alert('Terjadi kesalahan.');
     } finally {
       setVerifyingId(null);
     }
   };
 
   // Helper to parse Base64 attachments
-  const parseMedia = (imagePath: string): { photos: string[]; video: string | null } => {
+  const parseMedia = (imagePath: string): { photos: string[]; video: string | null; rejectionReason?: string } => {
     try {
       if (imagePath.startsWith('{')) {
         const parsed = JSON.parse(imagePath);
         return {
           photos: (parsed.photos || []).slice(0, 3), // Max 3 photos
           video: parsed.video || null,
+          rejectionReason: parsed.rejectionReason || undefined,
         };
       }
     } catch (e) {
@@ -544,6 +578,18 @@ export default function TeacherDashboard({
                                   </div>
                                 ))}
                               </div>
+                            </div>
+
+                            {/* Rejection Reason Input field */}
+                            <div className="mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                              <label className="text-[9px] font-black text-zinc-500 dark:text-zinc-400 uppercase block mb-1.5">Alasan Penolakan (Wajib jika menolak):</label>
+                              <textarea
+                                placeholder="Tulis alasan kenapa laporan ditolak... (Contoh: Pojok kelas masih banyak debu dan laci meja belum bersih)"
+                                value={rejectionReasons[report.id] || ''}
+                                onChange={(e) => setRejectionReasons(prev => ({ ...prev, [report.id]: e.target.value }))}
+                                className="w-full border-2 border-black dark:border-white bg-white dark:bg-zinc-800 p-2.5 text-xs outline-none focus:bg-zinc-50 dark:focus:bg-zinc-700 shadow-[2px_2px_0px_0px_#0ea5e9] dark:shadow-[2px_2px_0px_0px_#ffffff] text-black dark:text-white rounded-sm"
+                                rows={2}
+                              />
                             </div>
                           </div>
 

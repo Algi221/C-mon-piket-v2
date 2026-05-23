@@ -81,6 +81,7 @@ export default function Dashboard({
   const [videoName, setVideoName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
+  const [todayRejectionReason, setTodayRejectionReason] = useState<string | null>(null);
 
   // Time effect
   useEffect(() => {
@@ -138,10 +139,19 @@ export default function Dashboard({
     // Check if report has already been completed today
     const checkReportExists = () => {
       const todayStr = new Date().toISOString().split('T')[0];
-      const hasTodayReport = logs.some(
-        (l) => l.date === todayStr && (l.status === 'verified' || l.status === 'pending')
+      const todayReport = logs.find(
+        (l) => l.date === todayStr
       );
-      setTodayCompleted(hasTodayReport);
+      
+      const hasTodayReport = todayReport && (todayReport.status === 'verified' || todayReport.status === 'pending');
+      setTodayCompleted(!!hasTodayReport);
+
+      if (todayReport && todayReport.status === 'rejected') {
+        const media = parseMedia(todayReport.image_path) as any;
+        setTodayRejectionReason(media.rejectionReason || 'Alasan penolakan tidak ditentukan oleh guru.');
+      } else {
+        setTodayRejectionReason(null);
+      }
     };
 
     checkReportExists();
@@ -254,13 +264,14 @@ export default function Dashboard({
     }
   };
 
-  const parseMedia = (imagePath: string): { photos: string[]; video: string | null } => {
+  const parseMedia = (imagePath: string): { photos: string[]; video: string | null; rejectionReason?: string } => {
     try {
       if (imagePath.startsWith('{')) {
         const parsed = JSON.parse(imagePath);
         return {
           photos: (parsed.photos || []).slice(0, 3), // Max 3 photos
           video: parsed.video || null,
+          rejectionReason: parsed.rejectionReason || undefined,
         };
       }
     } catch (e) {
@@ -448,6 +459,23 @@ export default function Dashboard({
               </div>
             ) : (
               <div>
+                {/* REJECTION WARNING BANNER */}
+                {todayRejectionReason && (
+                  <div className="mb-6 border-4 border-red-500 bg-red-100 p-5 shadow-[4px_4px_0px_0px_#ef4444] text-red-950 rounded-sm">
+                    <div className="flex items-center gap-2 mb-2 border-b-2 border-red-400 pb-2">
+                      <AlertTriangle className="h-6 w-6 stroke-[3px] text-red-600 animate-bounce shrink-0" />
+                      <h3 className="text-lg font-black uppercase tracking-tight">LAPORAN PIKET HARI INI DITOLAK GURU! ✕</h3>
+                    </div>
+                    <p className="text-xs font-bold uppercase block">Alasan Penolakan oleh Guru:</p>
+                    <div className="my-2 border-2 border-red-400 bg-white p-3 text-xs font-black italic shadow-[2px_2px_0px_0px_#ef4444] rounded-sm text-red-700">
+                      "{todayRejectionReason}"
+                    </div>
+                    <p className="text-[10px] font-black uppercase text-red-800 leading-tight">
+                      Silakan bersihkan kembali area yang ditandai oleh Guru, kumpulkan regu piket, lalu klik tombol **"KIRIM ULANG BUKTI PIKET"** di bawah untuk mengirim ulang laporan!
+                    </p>
+                  </div>
+                )}
+
                 {/* PJ Card Indicator */}
                 {todayPjs.length > 0 ? (
                   <div className="mb-6 border-2 border-black bg-yellow-100 p-3 shadow-[3px_3px_0px_0px_#000000] text-xs font-black uppercase flex items-center gap-2">
@@ -508,9 +536,11 @@ export default function Dashboard({
                       isUserPjToday ? (
                         <button
                           onClick={() => setReportingOpen(true)}
-                          className="w-full border-2 border-black bg-pink-400 py-3.5 font-black text-xs uppercase shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_#000000] active:translate-x-0 active:translate-y-0 active:shadow-none cursor-pointer"
+                          className={`w-full border-2 border-black py-3.5 font-black text-xs uppercase shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_#000000] active:translate-x-0 active:translate-y-0 active:shadow-none cursor-pointer ${
+                            todayRejectionReason ? 'bg-red-400 text-white hover:bg-red-300' : 'bg-pink-400 text-black hover:bg-pink-300'
+                          }`}
                         >
-                          BUAT LAPORAN ABSENSI PIKET 📸
+                          {todayRejectionReason ? 'KIRIM ULANG BUKTI PIKET 📸' : 'BUAT LAPORAN ABSENSI PIKET 📸'}
                         </button>
                       ) : (
                         <div className="border-2 border-black bg-yellow-100 p-3 text-xs font-bold text-yellow-800 flex items-start gap-2.5 shadow-[2px_2px_0px_0px_#000000]">

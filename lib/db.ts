@@ -501,12 +501,15 @@ export const db = {
     };
   },
 
-  verifyReport: async (reportId: number, status: 'verified' | 'rejected'): Promise<boolean> => {
+  verifyReport: async (reportId: number, status: 'verified' | 'rejected', updatedImagePath?: string): Promise<boolean> => {
     const supabase = getSupabaseClient();
     if (supabase) {
+      const updates: any = { status };
+      if (updatedImagePath) updates.image_path = updatedImagePath;
+
       const { error } = await supabase
         .from('reports')
-        .update({ status })
+        .update(updates)
         .eq('id', reportId);
       
       if (!error) return true;
@@ -517,6 +520,7 @@ export const db = {
     const idx = reports.findIndex(r => r.id === reportId);
     if (idx !== -1) {
       reports[idx].status = status;
+      if (updatedImagePath) reports[idx].image_path = updatedImagePath;
       localDb.saveReports(reports);
       return true;
     }
