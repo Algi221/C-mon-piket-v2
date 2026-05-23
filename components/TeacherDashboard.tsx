@@ -428,105 +428,148 @@ export default function TeacherDashboard({
 
             </div>
 
-            {/* Big Verification Table Deck */}
-            <div className="border-4 border-black bg-white p-6 shadow-[6px_6px_0px_0px_#000000]">
-              <h2 className="text-2xl font-black uppercase mb-4 flex items-center gap-2 text-cyan-600">
+            {/* Big Verification Card Deck - ELIMINATED CRAMPED TABLE AND DENSE VIEW */}
+            <div className="border-4 border-black dark:border-white bg-white dark:bg-zinc-900 p-6 shadow-[6px_6px_0px_0px_#000000] dark:shadow-[6px_6px_0px_0px_#ffffff] mb-8">
+              <h2 className="text-2xl font-black uppercase mb-6 flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
                 <ClipboardList className="h-6 w-6 stroke-[3px]" />
-                Verifikasi Laporan Hari Ini
+                Verifikasi Laporan Hari Ini ({pendingReports.length})
               </h2>
 
               {pendingReports.length === 0 ? (
-                <div className="border-4 border-dashed border-zinc-200 py-10 text-center">
-                  <span className="text-3xl animate-pulse block mb-1.5">✨</span>
-                  <p className="text-sm font-black text-zinc-400 uppercase">Semua Laporan Piket Bersih!</p>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase">Belum ada antrean verifikasi baru dari siswa.</p>
+                <div className="border-4 border-dashed border-zinc-200 dark:border-zinc-800 py-12 text-center rounded-sm">
+                  <span className="text-4xl animate-pulse block mb-2">✨</span>
+                  <p className="text-base font-black text-zinc-400 dark:text-zinc-500 uppercase">Semua Laporan Piket Bersih!</p>
+                  <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase mt-1">Belum ada antrean verifikasi baru dari siswa.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto border-4 border-black shadow-[3px_3px_0px_0px_#000000]">
-                  <table className="w-full text-left border-collapse bg-white">
-                    <thead>
-                      <tr className="border-b-4 border-black bg-zinc-900 text-white text-[10px] font-black uppercase">
-                        <th className="p-3 border-r-2 border-black">Tanggal</th>
-                        <th className="p-3 border-r-2 border-black">Reporter (PJ)</th>
-                        <th className="p-3 border-r-2 border-black">Bukti Kebersihan</th>
-                        <th className="p-3 border-r-2 border-black">Catatan Roster</th>
-                        <th className="p-3 border-r-2 border-black">Rincian Presensi</th>
-                        <th className="p-3 text-center">Aksi Verifikasi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y-2 divide-black">
-                      {pendingReports.map((report) => {
-                        const media = parseMedia(report.image_path);
-                        return (
-                          <tr key={report.id} className="text-[10px] font-black uppercase hover:bg-zinc-50 transition-colors">
-                            
-                            <td className="p-3 border-r-2 border-black text-zinc-500 whitespace-nowrap">{report.date}</td>
-                            
-                            <td className="p-3 border-r-2 border-black text-cyan-600">{report.reporter_name}</td>
-                            
-                            <td className="p-3 border-r-2 border-black min-w-44">
-                              <div className="space-y-2">
-                                {media.photos.length > 0 && (
-                                  <div className="grid grid-cols-3 gap-1">
-                                    {media.photos.map((src, i) => (
-                                      <div key={i} className="border border-black h-10 w-10 overflow-hidden bg-zinc-950">
-                                        <img src={src} alt="Verify Preview" className="object-cover h-full w-full" />
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {media.video && (
-                                  <div className="flex items-center gap-1 border border-black bg-zinc-100 p-1 w-fit">
-                                    <Film className="h-3.5 w-3.5 stroke-[2.5px] text-pink-500" />
-                                    <span className="text-[7px]">LAMPIRAN VIDEO</span>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            
-                            <td className="p-3 border-r-2 border-black normal-case text-zinc-500 italic max-w-44 truncate" title={report.notes || ''}>
-                              {report.notes ? `"${report.notes}"` : '-'}
-                            </td>
+                <div className="space-y-8">
+                  {pendingReports.map((report) => {
+                    const media = parseMedia(report.image_path);
+                    return (
+                      <div 
+                        key={report.id} 
+                        className="border-4 border-black dark:border-white bg-zinc-50 dark:bg-zinc-800 p-6 sm:p-8 shadow-[8px_8px_0px_0px_#7c3aed] dark:shadow-[8px_8px_0px_0px_#ffffff] grid md:grid-cols-2 gap-8 items-start rounded-sm"
+                      >
+                        
+                        {/* LEFT COLUMN: EVIDENCE MEDIA & NOTES */}
+                        <div className="space-y-6">
+                          <div>
+                            <span className="border-2 border-black dark:border-white bg-pink-300 dark:bg-pink-300 text-black px-3 py-1 text-[10px] font-black uppercase shadow-[1.5px_1.5px_0px_0px_#000000] block w-fit mb-3">
+                              BUKTI VISUAL KEBERSIHAN
+                            </span>
+                            <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-4">
+                              KLIK PADA FOTO UNTUK MEMPERBESAR DAN MELIHAT SATU PER SATU SECARA FULL-SCREEN:
+                            </p>
 
-                            <td className="p-3 border-r-2 border-black min-w-36">
-                              <div className="flex flex-wrap gap-1">
-                                {report.details?.map((det) => (
-                                  <span
-                                    key={det.id}
-                                    className={`border px-1.5 py-0.2 text-[8px] font-black ${
-                                      det.is_present === 1 ? 'bg-green-100 border-green-700 text-green-800' : 'bg-red-100 border-red-700 text-red-800'
-                                    }`}
+                            {/* Large clickable visual list */}
+                            {media.photos.length > 0 ? (
+                              <div className="flex flex-wrap gap-4">
+                                {media.photos.map((src, i) => (
+                                  <div 
+                                    key={i} 
+                                    onClick={() => setZoomPhoto(src)}
+                                    className="border-4 border-black dark:border-white h-28 w-28 sm:h-32 sm:w-32 overflow-hidden bg-zinc-950 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] shrink-0 rounded-sm relative group"
+                                    title="Klik untuk perbesar foto"
                                   >
-                                    {det.student_name}: {det.is_present === 1 ? 'H' : 'A'}
-                                  </span>
+                                    <img src={src} alt="Verify Zoom Preview" className="object-cover h-full w-full" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                      <span className="text-[10px] font-black text-white uppercase tracking-wider">ZOOM 🔍</span>
+                                    </div>
+                                  </div>
                                 ))}
                               </div>
-                            </td>
+                            ) : (
+                              <p className="text-xs font-bold text-red-500 uppercase">TIDAK ADA FOTO BUKTI TERLAMPIR</p>
+                            )}
+                          </div>
 
-                            <td className="p-3 text-center min-w-40">
-                              <div className="flex gap-2 justify-center">
-                                <button
-                                  onClick={() => handleVerify(report.id, 'verified')}
-                                  disabled={verifyingId !== null}
-                                  className="border-2 border-black bg-green-300 px-2 py-1 shadow-[1.5px_1.5px_0px_0px_#000000] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
-                                >
-                                  ✔ SETUJUI
-                                </button>
-                                <button
-                                  onClick={() => handleVerify(report.id, 'rejected')}
-                                  disabled={verifyingId !== null}
-                                  className="border-2 border-black bg-red-300 px-2 py-1 shadow-[1.5px_1.5px_0px_0px_#000000] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
-                                >
-                                  ✕ TOLAK
-                                </button>
+                          {/* HTML5 Spacious controls Video Player */}
+                          {media.video && (
+                            <div className="mt-4 pt-4 border-t-2 border-dashed border-zinc-200 dark:border-zinc-700">
+                              <span className="border-2 border-black dark:border-white bg-purple-300 dark:bg-purple-300 text-black px-3 py-1 text-[10px] font-black uppercase shadow-[1.5px_1.5px_0px_0px_#000000] block w-fit mb-3">
+                                DOKUMENTASI VIDEO BUKTI (PLAYBACK KONTROL)
+                              </span>
+                              <div className="border-4 border-black dark:border-white bg-zinc-950 p-1.5 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] rounded-sm max-w-sm">
+                                <video src={media.video} controls className="w-full max-h-60 object-contain rounded-sm" />
                               </div>
-                            </td>
+                            </div>
+                          )}
 
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                          {/* Notes */}
+                          {report.notes && (
+                            <div className="border-4 border-black dark:border-white bg-yellow-100 dark:bg-yellow-900/30 p-4 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] text-black dark:text-white rounded-sm">
+                              <span className="text-[9px] font-black text-zinc-500 dark:text-zinc-400 uppercase block mb-1">Catatan Roster Reporter:</span>
+                              <p className="text-xs font-black italic">"{report.notes}"</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* RIGHT COLUMN: METADATA, PRESENSI & ACTIONS */}
+                        <div className="space-y-6 flex flex-col justify-between h-full w-full">
+                          
+                          <div>
+                            {/* Metadata */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-black dark:border-white pb-3 mb-4">
+                              <div>
+                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-wider block">Tanggal Pelaporan</span>
+                                <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">{report.date}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-wider block">Reporter PJ Utama</span>
+                                <span className="text-sm font-black text-cyan-600 dark:text-cyan-400">{report.reporter_name}</span>
+                              </div>
+                            </div>
+
+                            {/* Attendance details list - highly readable */}
+                            <div>
+                              <span className="border-2 border-black dark:border-white bg-yellow-300 dark:bg-yellow-300 text-black px-3 py-1 text-[10px] font-black uppercase shadow-[1.5px_1.5px_0px_0px_#000000] block w-fit mb-4">
+                                RINCIAN PRESENSI REGU PIKET
+                              </span>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {report.details?.map((det) => (
+                                  <div 
+                                    key={det.id} 
+                                    className={`border-2 border-black dark:border-white p-2.5 flex items-center justify-between text-[10px] font-black shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] rounded-sm ${
+                                      det.is_present === 1 
+                                        ? 'bg-green-100 border-green-700 text-green-900 dark:bg-green-950/40 dark:text-green-200' 
+                                        : 'bg-red-100 border-red-700 text-red-900 dark:bg-red-950/40 dark:text-red-200'
+                                    }`}
+                                  >
+                                    <span className="truncate max-w-[80%] text-zinc-900 dark:text-zinc-100">{det.student_name}</span>
+                                    <span className={`px-2 py-0.5 border border-black dark:border-white text-[8px] font-black uppercase shrink-0 ${
+                                      det.is_present === 1 ? 'bg-green-400 text-white' : 'bg-red-400 text-white'
+                                    }`}>
+                                      {det.is_present === 1 ? 'HADIR' : 'ABSEN'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Massive neubrutalist Action Buttons */}
+                          <div className="pt-6 border-t-2 border-zinc-100 dark:border-zinc-800 flex gap-4 w-full">
+                            <button
+                              onClick={() => handleVerify(report.id, 'verified')}
+                              disabled={verifyingId !== null}
+                              className="flex-1 border-4 border-black dark:border-white bg-green-400 hover:bg-green-300 text-black p-4 font-black text-xs uppercase shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                            >
+                              ✔ SETUJUI LAPORAN
+                            </button>
+                            <button
+                              onClick={() => handleVerify(report.id, 'rejected')}
+                              disabled={verifyingId !== null}
+                              className="flex-1 border-4 border-black dark:border-white bg-red-400 hover:bg-red-300 text-black p-4 font-black text-xs uppercase shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                            >
+                              ✕ TOLAK LAPORAN
+                            </button>
+                          </div>
+
+                        </div>
+
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
