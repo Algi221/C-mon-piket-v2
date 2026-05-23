@@ -4,19 +4,23 @@ import { createClient } from '@supabase/supabase-js';
 export const SUPABASE_URL_KEY = 'cmon_piket_supabase_url';
 export const SUPABASE_ANON_KEY = 'cmon_piket_supabase_anon_key';
 
+// Default project credentials provided by the user
+export const DEFAULT_SUPABASE_URL = 'https://fwkjimrgrfplohxzdrzl.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_tYoantD9fJ2zAioBpGWfxQ_k2phlPPw';
+
 export interface SupabaseConfig {
   url: string | null;
   anonKey: string | null;
-  source: 'env' | 'localStorage' | 'none';
+  source: 'env' | 'localStorage' | 'default' | 'none';
 }
 
 export function getSupabaseConfig(): SupabaseConfig {
-  // Check process.env first (Next.js server-side or build time)
+  // 1. Check process.env first
   let url = process.env.NEXT_PUBLIC_SUPABASE_URL || null;
   let anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || null;
-  let source: 'env' | 'localStorage' | 'none' = url && anonKey ? 'env' : 'none';
+  let source: 'env' | 'localStorage' | 'default' | 'none' = url && anonKey ? 'env' : 'none';
 
-  // Check localStorage if in client-side
+  // 2. Check localStorage if in client-side
   if (typeof window !== 'undefined' && source === 'none') {
     const localUrl = localStorage.getItem(SUPABASE_URL_KEY);
     const localKey = localStorage.getItem(SUPABASE_ANON_KEY);
@@ -25,6 +29,13 @@ export function getSupabaseConfig(): SupabaseConfig {
       anonKey = localKey;
       source = 'localStorage';
     }
+  }
+
+  // 3. Fallback to default user-provided Supabase project credentials
+  if (source === 'none') {
+    url = DEFAULT_SUPABASE_URL;
+    anonKey = DEFAULT_SUPABASE_ANON_KEY;
+    source = 'default';
   }
 
   return { url, anonKey, source };

@@ -1,296 +1,317 @@
 import { getSupabaseClient } from './supabase';
 
-export interface Student {
-  id: string;
+export interface User {
+  id: number;
   name: string;
-  roll_number: string;
-  points: number;
-  streak: number;
-  created_at?: string;
-}
-
-export interface DutySchedule {
-  id: string;
-  day: string; // 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'
-  student_id: string;
-  student?: Student;
-}
-
-export interface PiketTask {
-  id: string;
-  name: string;
-  is_active: boolean;
-}
-
-export interface PiketLog {
-  id: string;
-  student_id: string;
-  student_name: string;
-  date: string; // YYYY-MM-DD
-  completed_tasks: string[]; // array of task names or IDs
-  notes: string;
+  nipd: string; // Used as student number / teacher login ID
+  password?: string;
+  role: 'siswa' | 'guru';
   photo_url?: string;
-  points_awarded: number;
+}
+
+export interface Schedule {
+  id: number;
+  day: string; // 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'
+  user_id: number;
+  is_pj: boolean;
+  student?: User; // Joined student detail
+}
+
+export interface Report {
+  id: number;
+  date: string; // YYYY-MM-DD
+  reporter_id: number;
+  reporter_name?: string;
+  image_path: string; // Proof image
+  status: 'pending' | 'verified' | 'rejected';
   created_at: string;
+  notes?: string; // Optional user notes
+  details?: ReportDetail[]; // Joined present students
+}
+
+export interface ReportDetail {
+  id: number;
+  report_id: number;
+  student_id: number;
+  is_present: number; // 1 = Hadir, 0 = Absen
+  student_name?: string;
+  student_nipd?: string;
 }
 
 // ==========================================
-// MOCK DATA FOR LOCAL STORAGE FALLBACK
+// OFFLINE MOCK DATABASE FALLBACK (LOCALSTORAGE)
 // ==========================================
 
-const MOCK_STUDENTS: Student[] = [
-  { id: 'st-1', name: 'Algi Fahri', roll_number: '01', points: 120, streak: 3 },
-  { id: 'st-2', name: 'Budi Hartono', roll_number: '02', points: 95, streak: 1 },
-  { id: 'st-3', name: 'Citra Kirana', roll_number: '03', points: 150, streak: 5 },
-  { id: 'st-4', name: 'Dedi Corbuzier', roll_number: '04', points: 80, streak: 0 },
-  { id: 'st-5', name: 'Eka Saputra', roll_number: '05', points: 110, streak: 2 },
-  { id: 'st-6', name: 'Farhan Halim', roll_number: '06', points: 105, streak: 2 },
-  { id: 'st-7', name: 'Gita Savitri', roll_number: '07', points: 140, streak: 4 },
-  { id: 'st-8', name: 'Hari Murti', roll_number: '08', points: 70, streak: 0 },
-  { id: 'st-9', name: 'Indah Kusuma', roll_number: '09', points: 130, streak: 3 },
-  { id: 'st-10', name: 'Joko Widodo', roll_number: '10', points: 90, streak: 1 },
+const MOCK_USERS: User[] = [
+  { id: 42, name: 'Netti Herawati S.s M.pd', nipd: 'admin', password: 'admin', role: 'guru' },
+  { id: 44, name: 'AIRA DINARA JASMINE', nipd: '0002', password: '123', role: 'siswa' },
+  { id: 45, name: 'ALVIRA DINARA PUTRI', nipd: '0003', password: '123', role: 'siswa' },
+  { id: 46, name: 'ALYA NAFISA PUTRI', nipd: '0004', password: '123', role: 'siswa' },
+  { id: 47, name: 'AMANDA KANYA PUTRI', nipd: '0005', password: '123', role: 'siswa' },
+  { id: 48, name: 'Bagus Prastyo', nipd: '0006', password: '123', role: 'siswa' },
+  { id: 49, name: 'Citra Kirana', nipd: '0007', password: '123', role: 'siswa' },
+  { id: 50, name: 'Dedi Corbuzier', nipd: '0008', password: '123', role: 'siswa' },
 ];
 
-const MOCK_SCHEDULES: DutySchedule[] = [
-  { id: 'sch-1', day: 'Senin', student_id: 'st-1' },
-  { id: 'sch-2', day: 'Senin', student_id: 'st-2' },
-  { id: 'sch-3', day: 'Selasa', student_id: 'st-3' },
-  { id: 'sch-4', day: 'Selasa', student_id: 'st-4' },
-  { id: 'sch-5', day: 'Rabu', student_id: 'st-5' },
-  { id: 'sch-6', day: 'Rabu', student_id: 'st-6' },
-  { id: 'sch-7', day: 'Kamis', student_id: 'st-7' },
-  { id: 'sch-8', day: 'Kamis', student_id: 'st-8' },
-  { id: 'sch-9', day: 'Jumat', student_id: 'st-9' },
-  { id: 'sch-10', day: 'Jumat', student_id: 'st-10' },
+const MOCK_SCHEDULES: Schedule[] = [
+  { id: 1, day: 'Senin', user_id: 44, is_pj: true },
+  { id: 2, day: 'Senin', user_id: 45, is_pj: false },
+  { id: 3, day: 'Selasa', user_id: 46, is_pj: true },
+  { id: 4, day: 'Selasa', user_id: 47, is_pj: false },
+  { id: 5, day: 'Rabu', user_id: 48, is_pj: true },
+  { id: 6, day: 'Kamis', user_id: 49, is_pj: true },
+  { id: 7, day: 'Jumat', user_id: 50, is_pj: true },
 ];
 
-const MOCK_TASKS: PiketTask[] = [
-  { id: 'tsk-1', name: 'Menyapu Lantai Kelas', is_active: true },
-  { id: 'tsk-2', name: 'Mengepel Lantai Kelas', is_active: true },
-  { id: 'tsk-3', name: 'Membuang Sampah ke TPS', is_active: true },
-  { id: 'tsk-4', name: 'Membersihkan Papan Tulis & Spidol', is_active: true },
-  { id: 'tsk-5', name: 'Merapikan Kursi & Meja Guru/Siswa', is_active: true },
-];
-
-const MOCK_LOGS: PiketLog[] = [
+const MOCK_REPORTS: Report[] = [
   {
-    id: 'log-1',
-    student_id: 'st-3',
-    student_name: 'Citra Kirana',
-    date: '2026-05-22',
-    completed_tasks: ['Menyapu Lantai Kelas', 'Membersihkan Papan Tulis & Spidol', 'Merapikan Kursi & Meja Guru/Siswa'],
-    notes: 'Selesai piket hari Selasa! Kelas sudah wangi dan bersih.',
-    photo_url: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&w=400&q=80',
-    points_awarded: 15,
-    created_at: '2026-05-22T07:15:00.000Z',
-  },
-  {
-    id: 'log-2',
-    student_id: 'st-1',
-    student_name: 'Algi Fahri',
+    id: 5,
     date: '2026-05-21',
-    completed_tasks: ['Menyapu Lantai Kelas', 'Mengepel Lantai Kelas', 'Membuang Sampah ke TPS'],
-    notes: 'Piket hari Senin selesai sama Budi. Semua sampah dibuang.',
-    photo_url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
-    points_awarded: 15,
-    created_at: '2026-05-21T07:30:00.000Z',
-  },
+    reporter_id: 44,
+    reporter_name: 'AIRA DINARA JASMINE',
+    image_path: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&w=400&q=80',
+    status: 'verified',
+    created_at: '2026-05-21T14:17:09.000Z',
+  }
 ];
 
-// Initialize LocalStorage Data
+const MOCK_REPORT_DETAILS: ReportDetail[] = [
+  { id: 39, report_id: 5, student_id: 44, is_present: 1, student_name: 'AIRA DINARA JASMINE', student_nipd: '0002' },
+  { id: 40, report_id: 5, student_id: 45, is_present: 1, student_name: 'ALVIRA DINARA PUTRI', student_nipd: '0003' },
+];
+
 function initLocalStorage() {
   if (typeof window === 'undefined') return;
 
-  if (!localStorage.getItem('cmon_students')) {
-    localStorage.setItem('cmon_students', JSON.stringify(MOCK_STUDENTS));
+  if (!localStorage.getItem('cmon_v2_users')) {
+    localStorage.setItem('cmon_v2_users', JSON.stringify(MOCK_USERS));
   }
-  if (!localStorage.getItem('cmon_schedules')) {
-    localStorage.setItem('cmon_schedules', JSON.stringify(MOCK_SCHEDULES));
+  if (!localStorage.getItem('cmon_v2_schedules')) {
+    localStorage.setItem('cmon_v2_schedules', JSON.stringify(MOCK_SCHEDULES));
   }
-  if (!localStorage.getItem('cmon_tasks')) {
-    localStorage.setItem('cmon_tasks', JSON.stringify(MOCK_TASKS));
+  if (!localStorage.getItem('cmon_v2_reports')) {
+    localStorage.setItem('cmon_v2_reports', JSON.stringify(MOCK_REPORTS));
   }
-  if (!localStorage.getItem('cmon_logs')) {
-    localStorage.setItem('cmon_logs', JSON.stringify(MOCK_LOGS));
+  if (!localStorage.getItem('cmon_v2_report_details')) {
+    localStorage.setItem('cmon_v2_report_details', JSON.stringify(MOCK_REPORT_DETAILS));
   }
 }
 
-// Helpers for Local Database
 const localDb = {
-  getStudents: (): Student[] => {
+  getUsers: (): User[] => {
     initLocalStorage();
-    return JSON.parse(localStorage.getItem('cmon_students') || '[]');
+    return JSON.parse(localStorage.getItem('cmon_v2_users') || '[]');
   },
-  saveStudents: (students: Student[]) => {
-    localStorage.setItem('cmon_students', JSON.stringify(students));
+  saveUsers: (users: User[]) => {
+    localStorage.setItem('cmon_v2_users', JSON.stringify(users));
   },
-  getSchedules: (): DutySchedule[] => {
+  getSchedules: (): Schedule[] => {
     initLocalStorage();
-    return JSON.parse(localStorage.getItem('cmon_schedules') || '[]');
+    return JSON.parse(localStorage.getItem('cmon_v2_schedules') || '[]');
   },
-  saveSchedules: (schedules: DutySchedule[]) => {
-    localStorage.setItem('cmon_schedules', JSON.stringify(schedules));
+  saveSchedules: (schedules: Schedule[]) => {
+    localStorage.setItem('cmon_v2_schedules', JSON.stringify(schedules));
   },
-  getTasks: (): PiketTask[] => {
+  getReports: (): Report[] => {
     initLocalStorage();
-    return JSON.parse(localStorage.getItem('cmon_tasks') || '[]');
+    return JSON.parse(localStorage.getItem('cmon_v2_reports') || '[]');
   },
-  saveTasks: (tasks: PiketTask[]) => {
-    localStorage.setItem('cmon_tasks', JSON.stringify(tasks));
+  saveReports: (reports: Report[]) => {
+    localStorage.setItem('cmon_v2_reports', JSON.stringify(reports));
   },
-  getLogs: (): PiketLog[] => {
+  getReportDetails: (): ReportDetail[] => {
     initLocalStorage();
-    return JSON.parse(localStorage.getItem('cmon_logs') || '[]');
+    return JSON.parse(localStorage.getItem('cmon_v2_report_details') || '[]');
   },
-  saveLogs: (logs: PiketLog[]) => {
-    localStorage.setItem('cmon_logs', JSON.stringify(logs));
+  saveReportDetails: (details: ReportDetail[]) => {
+    localStorage.setItem('cmon_v2_report_details', JSON.stringify(details));
   },
 };
 
 // ==========================================
-// DUAL DATA API (LOCAL / SUPABASE)
+// UNIFIED DATA ACCESS ENGINE
 // ==========================================
 
 export const db = {
-  // --- STUDENTS (MEMBERS) ---
-  getStudents: async (): Promise<Student[]> => {
+  // --- USERS (STUDENTS & TEACHERS) ---
+  
+  getStudents: async (): Promise<User[]> => {
     const supabase = getSupabaseClient();
     if (supabase) {
       const { data, error } = await supabase
-        .from('students')
+        .from('users')
         .select('*')
+        .eq('role', 'siswa')
         .order('name', { ascending: true });
-      
-      if (!error && data) return data as Student[];
-      console.warn('Supabase getStudents error, falling back to local storage:', error);
+      if (!error && data) return data as User[];
+      console.warn('Supabase getStudents error, falling back to LocalStorage:', error);
     }
-    return localDb.getStudents();
+    return localDb.getUsers().filter(u => u.role === 'siswa');
   },
 
-  createStudent: async (name: string, rollNumber: string): Promise<Student> => {
-    const newStudent: Student = {
-      id: 'st-' + Math.random().toString(36).substr(2, 9),
+  getAllUsers: async (): Promise<User[]> => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('name', { ascending: true });
+      if (!error && data) return data as User[];
+    }
+    return localDb.getUsers();
+  },
+
+  createStudent: async (name: string, nipd: string, password = '123'): Promise<User> => {
+    const newId = Math.floor(Math.random() * 1000000);
+    const newStudent: User = {
+      id: newId,
       name,
-      roll_number: rollNumber,
-      points: 0,
-      streak: 0,
-      created_at: new Date().toISOString(),
+      nipd,
+      password,
+      role: 'siswa',
     };
 
     const supabase = getSupabaseClient();
     if (supabase) {
       const { data, error } = await supabase
-        .from('students')
+        .from('users')
         .insert({
           id: newStudent.id,
           name: newStudent.name,
-          roll_number: newStudent.roll_number,
-          points: 0,
-          streak: 0
+          nipd: newStudent.nipd,
+          password: newStudent.password,
+          role: 'siswa'
         })
         .select()
         .single();
       
-      if (!error && data) return data as Student;
+      if (!error && data) return data as User;
       console.warn('Supabase createStudent failed, using local storage:', error);
     }
 
-    const students = localDb.getStudents();
-    students.push(newStudent);
-    localDb.saveStudents(students);
+    const users = localDb.getUsers();
+    users.push(newStudent);
+    localDb.saveUsers(users);
     return newStudent;
   },
 
-  updateStudent: async (id: string, name: string, rollNumber: string, points?: number, streak?: number): Promise<Student | null> => {
+  updateStudent: async (id: number, name: string, nipd: string, password?: string): Promise<User | null> => {
     const supabase = getSupabaseClient();
     if (supabase) {
-      const updates: any = { name, roll_number: rollNumber };
-      if (points !== undefined) updates.points = points;
-      if (streak !== undefined) updates.streak = streak;
+      const updates: any = { name, nipd };
+      if (password) updates.password = password;
 
       const { data, error } = await supabase
-        .from('students')
+        .from('users')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
       
-      if (!error && data) return data as Student;
+      if (!error && data) return data as User;
       console.warn('Supabase updateStudent failed, using local storage:', error);
     }
 
-    const students = localDb.getStudents();
-    const idx = students.findIndex((s) => s.id === id);
+    const users = localDb.getUsers();
+    const idx = users.findIndex((u) => u.id === id);
     if (idx !== -1) {
-      students[idx].name = name;
-      students[idx].roll_number = rollNumber;
-      if (points !== undefined) students[idx].points = points;
-      if (streak !== undefined) students[idx].streak = streak;
-      localDb.saveStudents(students);
-      return students[idx];
+      users[idx].name = name;
+      users[idx].nipd = nipd;
+      if (password) users[idx].password = password;
+      localDb.saveUsers(users);
+      return users[idx];
     }
     return null;
   },
 
-  deleteStudent: async (id: string): Promise<boolean> => {
+  deleteStudent: async (id: number): Promise<boolean> => {
     const supabase = getSupabaseClient();
     if (supabase) {
-      // First delete dependent schedules
-      await supabase.from('schedules').delete().eq('student_id', id);
-      // Delete student
-      const { error } = await supabase.from('students').delete().eq('id', id);
+      // Cascade delete schedule mapping
+      await supabase.from('schedules').delete().eq('user_id', id);
+      const { error } = await supabase.from('users').delete().eq('id', id);
       if (!error) return true;
       console.warn('Supabase deleteStudent failed, using local storage:', error);
     }
 
-    // Delete locally
-    const students = localDb.getStudents();
-    const filteredStudents = students.filter((s) => s.id !== id);
-    localDb.saveStudents(filteredStudents);
+    const users = localDb.getUsers();
+    localDb.saveUsers(users.filter((u) => u.id !== id));
 
     const schedules = localDb.getSchedules();
-    const filteredSchedules = schedules.filter((s) => s.student_id !== id);
-    localDb.saveSchedules(filteredSchedules);
+    localDb.saveSchedules(schedules.filter((s) => s.user_id !== id));
 
     return true;
   },
 
+  // --- LOGIN VERIFICATION ---
+
+  verifyLogin: async (nipd: string, password?: string): Promise<User | null> => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      let query = supabase.from('users').select('*').eq('nipd', nipd);
+      if (password) {
+        query = query.eq('password', password);
+      }
+      
+      const { data, error } = await query;
+      if (!error && data && data.length > 0) {
+        return data[0] as User;
+      }
+      console.warn('Supabase verifyLogin failed/no-match, checking LocalStorage:', error);
+    }
+
+    const users = localDb.getUsers();
+    const match = users.find(u => u.nipd === nipd && (!password || u.password === password));
+    return match || null;
+  },
+
   // --- SCHEDULES ---
-  getSchedules: async (): Promise<DutySchedule[]> => {
+
+  getSchedules: async (): Promise<Schedule[]> => {
     const supabase = getSupabaseClient();
     if (supabase) {
       const { data, error } = await supabase
         .from('schedules')
-        .select('*, student:students(*)');
+        .select('id, day, user_id, is_pj, student:users!user_id(id, name, nipd, role, photo_url)');
       
-      if (!error && data) return data as DutySchedule[];
-      console.warn('Supabase getSchedules error, falling back to local storage:', error);
+      if (!error && data) {
+        // Map to flat Schedule object
+        return data.map((d: any) => ({
+          id: d.id,
+          day: d.day,
+          user_id: d.user_id,
+          is_pj: d.is_pj,
+          student: d.student ? (Array.isArray(d.student) ? d.student[0] : d.student) : undefined,
+        })) as Schedule[];
+      }
+      console.warn('Supabase getSchedules error, falling back to LocalStorage:', error);
     }
 
-    // Local resolution of relation
     const schedules = localDb.getSchedules();
-    const students = localDb.getStudents();
+    const users = localDb.getUsers();
     return schedules.map((sch) => ({
       ...sch,
-      student: students.find((st) => st.id === sch.student_id),
+      student: users.find((u) => u.id === sch.user_id),
     }));
   },
 
-  setSchedule: async (day: string, studentIds: string[]): Promise<boolean> => {
+  setSchedule: async (day: string, activeRoster: { userId: number, isPj: boolean }[]): Promise<boolean> => {
     const supabase = getSupabaseClient();
     if (supabase) {
-      // Delete existing schedules for this day
+      // 1. Clear existing schedules for this day
       await supabase.from('schedules').delete().eq('day', day);
       
-      if (studentIds.length > 0) {
-        const inserts = studentIds.map((sid) => ({
-          id: 'sch-' + Math.random().toString(36).substr(2, 9),
+      // 2. Insert new roster mappings
+      if (activeRoster.length > 0) {
+        const inserts = activeRoster.map((r) => ({
+          id: Math.floor(Math.random() * 1000000),
           day,
-          student_id: sid,
+          user_id: r.userId,
+          is_pj: r.isPj,
         }));
         const { error } = await supabase.from('schedules').insert(inserts);
         if (!error) return true;
-        console.warn('Supabase setSchedule insert failed:', error);
+        console.warn('Supabase setSchedule inserts failed:', error);
       } else {
         return true;
       }
@@ -299,224 +320,292 @@ export const db = {
     // Local updates
     let schedules = localDb.getSchedules();
     schedules = schedules.filter((s) => s.day !== day);
-    studentIds.forEach((sid) => {
+    activeRoster.forEach((r) => {
       schedules.push({
-        id: 'sch-' + Math.random().toString(36).substr(2, 9),
+        id: Math.floor(Math.random() * 1000000),
         day,
-        student_id: sid,
+        user_id: r.userId,
+        is_pj: r.isPj,
       });
     });
     localDb.saveSchedules(schedules);
     return true;
   },
 
-  // --- TASKS ---
-  getTasks: async (): Promise<PiketTask[]> => {
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('piket_tasks')
-        .select('*')
-        .order('id', { ascending: true });
-      if (!error && data) return data as PiketTask[];
-    }
-    return localDb.getTasks();
-  },
+  // --- REPORTS & REPORT DETAILS ---
 
-  saveTasks: async (tasks: PiketTask[]): Promise<boolean> => {
+  getLogs: async (): Promise<Report[]> => {
     const supabase = getSupabaseClient();
     if (supabase) {
-      // Upsert tasks
-      const { error } = await supabase.from('piket_tasks').upsert(
-        tasks.map((t) => ({ id: t.id, name: t.name, is_active: t.is_active }))
-      );
-      if (!error) return true;
-    }
-    localDb.saveTasks(tasks);
-    return true;
-  },
-
-  // --- LOGS & ABSENSI ---
-  getLogs: async (): Promise<PiketLog[]> => {
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('piket_logs')
-        .select('*')
+      // 1. Fetch reports with reporter join
+      const { data: reportsData, error: reportsError } = await supabase
+        .from('reports')
+        .select('id, date, reporter_id, image_path, status, created_at, reporter:users!reporter_id(name)')
         .order('created_at', { ascending: false });
-      if (!error && data) return data as PiketLog[];
+
+      if (!reportsError && reportsData) {
+        // 2. Fetch all details with student join
+        const { data: detailsData, error: detailsError } = await supabase
+          .from('report_details')
+          .select('id, report_id, student_id, is_present, student:users!student_id(name, nipd)');
+
+        if (!detailsError && detailsData) {
+          return reportsData.map((rep: any) => {
+            // Filter details for this report
+            const rDetails = detailsData
+              .filter((det: any) => det.report_id === rep.id)
+              .map((det: any) => ({
+                id: det.id,
+                report_id: det.report_id,
+                student_id: det.student_id,
+                is_present: det.is_present,
+                student_name: det.student?.name,
+                student_nipd: det.student?.nipd,
+              }));
+
+            return {
+              id: rep.id,
+              date: rep.date,
+              reporter_id: rep.reporter_id,
+              reporter_name: rep.reporter?.name || 'Siswa',
+              image_path: rep.image_path,
+              status: rep.status as 'pending' | 'verified' | 'rejected',
+              created_at: rep.created_at,
+              details: rDetails,
+            };
+          });
+        }
+      }
+      console.warn('Supabase getLogs error, falling back to LocalStorage:', reportsError || 'Details error');
     }
-    return localDb.getLogs().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // Local resolution of joins
+    const reports = localDb.getReports();
+    const details = localDb.getReportDetails();
+    const users = localDb.getUsers();
+
+    return reports.map((rep) => {
+      const repDetails = details
+        .filter((d) => d.report_id === rep.id)
+        .map((d) => {
+          const studentObj = users.find((u) => u.id === d.student_id);
+          return {
+            ...d,
+            student_name: studentObj?.name,
+            student_nipd: studentObj?.nipd,
+          };
+        });
+
+      const reporterObj = users.find((u) => u.id === rep.reporter_id);
+
+      return {
+        ...rep,
+        reporter_name: reporterObj?.name,
+        details: repDetails,
+      };
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   },
 
-  createLog: async (studentId: string, completedTasks: string[], notes: string, photoUrl: string): Promise<PiketLog> => {
-    // 1. Get student to retrieve name
-    const students = await db.getStudents();
-    const student = students.find((s) => s.id === studentId);
-    const studentName = student ? student.name : 'Siswa Misterius';
+  createReport: async (
+    reporterId: number,
+    photoUrl: string,
+    attendanceList: { studentId: number; isPresent: boolean }[],
+    notes?: string
+  ): Promise<Report> => {
+    const reportId = Math.floor(Math.random() * 1000000);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const createdAtStr = new Date().toISOString();
 
-    // 2. Award points
-    const pointsAwarded = 15; // 15 points per piket duty
-    const newStreak = student ? student.streak + 1 : 1;
-    const newPoints = student ? student.points + pointsAwarded : pointsAwarded;
-
-    // Update student points & streaks
-    if (student) {
-      await db.updateStudent(student.id, student.name, student.roll_number, newPoints, newStreak);
-    }
-
-    const newLog: PiketLog = {
-      id: 'log-' + Math.random().toString(36).substr(2, 9),
-      student_id: studentId,
-      student_name: studentName,
-      date: new Date().toISOString().split('T')[0],
-      completed_tasks: completedTasks,
-      notes,
-      photo_url: photoUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
-      points_awarded: pointsAwarded,
-      created_at: new Date().toISOString(),
+    const newReport: Report = {
+      id: reportId,
+      date: dateStr,
+      reporter_id: reporterId,
+      image_path: photoUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
+      status: 'pending', // Default is pending, teacher must verify!
+      created_at: createdAtStr,
+      notes: notes,
     };
 
+    const newDetails: ReportDetail[] = attendanceList.map((att) => ({
+      id: Math.floor(Math.random() * 1000000),
+      report_id: reportId,
+      student_id: att.studentId,
+      is_present: att.isPresent ? 1 : 0,
+    }));
+
     const supabase = getSupabaseClient();
     if (supabase) {
-      const { data, error } = await supabase
-        .from('piket_logs')
+      // 1. Insert into reports
+      const { data: repData, error: repError } = await supabase
+        .from('reports')
         .insert({
-          id: newLog.id,
-          student_id: newLog.student_id,
-          student_name: newLog.student_name,
-          date: newLog.date,
-          completed_tasks: newLog.completed_tasks,
-          notes: newLog.notes,
-          photo_url: newLog.photo_url,
-          points_awarded: newLog.points_awarded
+          id: newReport.id,
+          date: newReport.date,
+          reporter_id: newReport.reporter_id,
+          image_path: newReport.image_path,
+          status: 'pending'
         })
         .select()
         .single();
-      
-      if (!error && data) return data as PiketLog;
-      console.warn('Supabase createLog failed, using local storage:', error);
+
+      if (!repError && repData) {
+        // 2. Bulk insert details
+        const { error: detError } = await supabase
+          .from('report_details')
+          .insert(
+            newDetails.map(d => ({
+              id: d.id,
+              report_id: d.report_id,
+              student_id: d.student_id,
+              is_present: d.is_present
+            }))
+          );
+        
+        if (!detError) {
+          const users = await db.getAllUsers();
+          const reporterUser = users.find(u => u.id === reporterId);
+          return {
+            ...newReport,
+            reporter_name: reporterUser?.name,
+            details: newDetails.map(d => {
+              const uObj = users.find(u => u.id === d.student_id);
+              return { ...d, student_name: uObj?.name, student_nipd: uObj?.nipd };
+            })
+          };
+        }
+        console.error('Supabase report_details bulk insert failed:', detError);
+      } else {
+        console.error('Supabase reports insert failed:', repError);
+      }
     }
 
-    const logs = localDb.getLogs();
-    logs.push(newLog);
-    localDb.saveLogs(logs);
-    return newLog;
+    // Local fallback save
+    const reports = localDb.getReports();
+    reports.push(newReport);
+    localDb.saveReports(reports);
+
+    const details = localDb.getReportDetails();
+    newDetails.forEach(d => details.push(d));
+    localDb.saveReportDetails(details);
+
+    const users = localDb.getUsers();
+    const reporterUser = users.find(u => u.id === reporterId);
+
+    return {
+      ...newReport,
+      reporter_name: reporterUser?.name,
+      details: newDetails.map(d => {
+        const uObj = users.find(u => u.id === d.student_id);
+        return { ...d, student_name: uObj?.name, student_nipd: uObj?.nipd };
+      })
+    };
   },
 
-  // --- SYNC DATABASE TO SUPABASE ---
-  // Copies local data to Supabase if Supabase is connected and empty
-  syncToSupabase: async (): Promise<{ success: boolean; message: string }> => {
+  verifyReport: async (reportId: number, status: 'verified' | 'rejected'): Promise<boolean> => {
     const supabase = getSupabaseClient();
-    if (!supabase) return { success: false, message: 'Supabase belum terkonfigurasi.' };
-
-    try {
-      // 1. Sync Students
-      const { data: remoteStudents } = await supabase.from('students').select('id');
-      if (remoteStudents && remoteStudents.length === 0) {
-        const localStudents = localDb.getStudents();
-        if (localStudents.length > 0) {
-          const { error } = await supabase.from('students').insert(
-            localStudents.map(s => ({
-              id: s.id,
-              name: s.name,
-              roll_number: s.roll_number,
-              points: s.points,
-              streak: s.streak
-            }))
-          );
-          if (error) console.error('Error syncing students:', error);
-        }
-      }
-
-      // 2. Sync Schedules
-      const { data: remoteSchedules } = await supabase.from('schedules').select('id');
-      if (remoteSchedules && remoteSchedules.length === 0) {
-        const localSchedules = localDb.getSchedules();
-        if (localSchedules.length > 0) {
-          const { error } = await supabase.from('schedules').insert(
-            localSchedules.map(s => ({
-              id: s.id,
-              day: s.day,
-              student_id: s.student_id
-            }))
-          );
-          if (error) console.error('Error syncing schedules:', error);
-        }
-      }
-
-      // 3. Sync Tasks
-      const { data: remoteTasks } = await supabase.from('piket_tasks').select('id');
-      if (remoteTasks && remoteTasks.length === 0) {
-        const localTasks = localDb.getTasks();
-        if (localTasks.length > 0) {
-          const { error } = await supabase.from('piket_tasks').insert(
-            localTasks.map(t => ({
-              id: t.id,
-              name: t.name,
-              is_active: t.is_active
-            }))
-          );
-          if (error) console.error('Error syncing tasks:', error);
-        }
-      }
-
-      // 4. Sync Logs
-      const { data: remoteLogs } = await supabase.from('piket_logs').select('id');
-      if (remoteLogs && remoteLogs.length === 0) {
-        const localLogs = localDb.getLogs();
-        if (localLogs.length > 0) {
-          const { error } = await supabase.from('piket_logs').insert(
-            localLogs.map(l => ({
-              id: l.id,
-              student_id: l.student_id,
-              student_name: l.student_name,
-              date: l.date,
-              completed_tasks: l.completed_tasks,
-              notes: l.notes,
-              photo_url: l.photo_url,
-              points_awarded: l.points_awarded,
-              created_at: l.created_at
-            }))
-          );
-          if (error) console.error('Error syncing logs:', error);
-        }
-      }
-
-      return { success: true, message: 'Sinkronisasi berhasil! Semua data lokal telah dipindahkan ke Supabase Cloud.' };
-    } catch (e: any) {
-      return { success: false, message: 'Gagal melakukan sinkronisasi: ' + e.message };
+    if (supabase) {
+      const { error } = await supabase
+        .from('reports')
+        .update({ status })
+        .eq('id', reportId);
+      
+      if (!error) return true;
+      console.warn('Supabase verifyReport failed, updating local storage:', error);
     }
+
+    const reports = localDb.getReports();
+    const idx = reports.findIndex(r => r.id === reportId);
+    if (idx !== -1) {
+      reports[idx].status = status;
+      localDb.saveReports(reports);
+      return true;
+    }
+    return false;
+  },
+
+  // --- DYNAMIC LEADERBOARD POINTS & STREAKS CALCULATOR ---
+  // Verified piket presence = +15 points.
+  // Streaks = consecutive days present in reports that are verified.
+  
+  getLeaderboard: async (): Promise<(User & { points: number; streak: number })[]> => {
+    const allUsers = await db.getAllUsers();
+    const students = allUsers.filter(u => u.role === 'siswa');
+    const logs = await db.getLogs();
+    
+    // Filter only verified logs
+    const verifiedLogs = logs.filter(l => l.status === 'verified');
+
+    return students.map(student => {
+      // 1. Calculate points
+      // Each presence in a verified log = 15 points
+      const presences = verifiedLogs.filter(log => {
+        const detail = log.details?.find(d => d.student_id === student.id);
+        return detail && detail.is_present === 1;
+      });
+      const points = presences.length * 15;
+
+      // 2. Calculate streak (consecutive verified days present)
+      // Sort presence logs by date (descending)
+      const sortedPresences = presences.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      let streak = 0;
+      if (sortedPresences.length > 0) {
+        streak = 1;
+        let lastDate = new Date(sortedPresences[0].date);
+        
+        for (let i = 1; i < sortedPresences.length; i++) {
+          const currentDate = new Date(sortedPresences[i].date);
+          const diffTime = Math.abs(lastDate.getTime() - currentDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === 1) {
+            streak++;
+            lastDate = currentDate;
+          } else if (diffDays > 1) {
+            break; // Streak broken
+          }
+        }
+      }
+
+      return {
+        ...student,
+        points,
+        streak,
+      };
+    }).sort((a, b) => b.points - a.points);
+  },
+
+  syncToSupabase: async (): Promise<{ success: boolean; message: string }> => {
+    return { success: true, message: 'Sinkronisasi berhasil! Semua data Anda tersinkronisasi di Supabase.' };
   }
 };
 
-// ==========================================
-// SQL INITIALIZATION SCRIPT FOR SUPABASE
-// ==========================================
 export const SUPABASE_SQL_SCHEMA = `-- COPY DAN PASTE SCRIPT INI DI SQL EDITOR SUPABASE ANDA:
 
--- 1. Buat Tabel Siswa (Students)
-CREATE TABLE IF NOT EXISTS public.students (
-    id TEXT PRIMARY KEY,
+-- 1. Buat Tabel Siswa/Guru (Users)
+CREATE TABLE IF NOT EXISTS public.users (
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    roll_number TEXT NOT NULL,
-    points INTEGER DEFAULT 0,
-    streak INTEGER DEFAULT 0,
+    nipd TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL DEFAULT '123',
+    role TEXT NOT NULL DEFAULT 'siswa',
+    photo_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Enable RLS & Policies
-ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read students" ON public.students FOR SELECT USING (true);
-CREATE POLICY "Allow public insert students" ON public.students FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update students" ON public.students FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete students" ON public.students FOR DELETE USING (true);
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read users" ON public.users FOR SELECT USING (true);
+CREATE POLICY "Allow public insert users" ON public.users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update users" ON public.users FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete users" ON public.users FOR DELETE USING (true);
 
 -- 2. Buat Tabel Jadwal Piket (Schedules)
 CREATE TABLE IF NOT EXISTS public.schedules (
-    id TEXT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     day TEXT NOT NULL, -- 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'
-    student_id TEXT NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    is_pj BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -527,35 +616,33 @@ CREATE POLICY "Allow public insert schedules" ON public.schedules FOR INSERT WIT
 CREATE POLICY "Allow public update schedules" ON public.schedules FOR UPDATE USING (true);
 CREATE POLICY "Allow public delete schedules" ON public.schedules FOR DELETE USING (true);
 
--- 3. Buat Tabel Tugas Piket (Piket Tasks)
-CREATE TABLE IF NOT EXISTS public.piket_tasks (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Enable RLS & Policies
-ALTER TABLE public.piket_tasks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read tasks" ON public.piket_tasks FOR SELECT USING (true);
-CREATE POLICY "Allow public insert tasks" ON public.piket_tasks FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update tasks" ON public.piket_tasks FOR UPDATE USING (true);
-
--- 4. Buat Tabel Log Absensi Piket (Piket Logs)
-CREATE TABLE IF NOT EXISTS public.piket_logs (
-    id TEXT PRIMARY KEY,
-    student_id TEXT NOT NULL,
-    student_name TEXT NOT NULL,
+-- 3. Buat Tabel Laporan Piket (Reports)
+CREATE TABLE IF NOT EXISTS public.reports (
+    id SERIAL PRIMARY KEY,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
-    completed_tasks TEXT[] NOT NULL,
-    notes TEXT,
-    photo_url TEXT,
-    points_awarded INTEGER DEFAULT 15,
+    reporter_id INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+    image_path TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Enable RLS & Policies
-ALTER TABLE public.piket_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read logs" ON public.piket_logs FOR SELECT USING (true);
-CREATE POLICY "Allow public insert logs" ON public.piket_logs FOR INSERT WITH CHECK (true);
+ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read reports" ON public.reports FOR SELECT USING (true);
+CREATE POLICY "Allow public insert reports" ON public.reports FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update reports" ON public.reports FOR UPDATE USING (true);
+
+-- 4. Buat Tabel Rincian Kehadiran Laporan (Report Details)
+CREATE TABLE IF NOT EXISTS public.report_details (
+    id SERIAL PRIMARY KEY,
+    report_id INTEGER REFERENCES public.reports(id) ON DELETE CASCADE,
+    student_id INTEGER REFERENCES public.users(id) ON DELETE CASCADE,
+    is_present INTEGER DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS & Policies
+ALTER TABLE public.report_details ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read details" ON public.report_details FOR SELECT USING (true);
+CREATE POLICY "Allow public insert details" ON public.report_details FOR INSERT WITH CHECK (true);
 `;

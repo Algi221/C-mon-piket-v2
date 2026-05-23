@@ -16,7 +16,7 @@ export default function SupabaseSetup({ onConnectionChange, supabaseConnected }:
   const [copiedSql, setCopiedSql] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ success?: boolean; message: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [configSource, setConfigSource] = useState<'env' | 'localStorage' | 'none'>('none');
+  const [configSource, setConfigSource] = useState<'env' | 'localStorage' | 'default' | 'none'>('none');
 
   useEffect(() => {
     const config = getSupabaseConfig();
