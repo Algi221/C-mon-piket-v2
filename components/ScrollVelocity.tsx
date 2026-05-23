@@ -19,7 +19,7 @@ interface VelocityMapping {
 interface VelocityTextProps {
   children: React.ReactNode;
   baseVelocity: number;
-  scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  scrollContainerRef?: React.RefObject<HTMLElement>;
   className?: string;
   damping?: number;
   stiffness?: number;
@@ -32,7 +32,7 @@ interface VelocityTextProps {
 }
 
 interface ScrollVelocityProps {
-  scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  scrollContainerRef?: React.RefObject<HTMLElement>;
   texts: React.ReactNode[];
   velocity?: number;
   className?: string;

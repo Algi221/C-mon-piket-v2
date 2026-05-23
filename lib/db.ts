@@ -575,8 +575,129 @@ export const db = {
     }).sort((a, b) => b.points - a.points);
   },
 
+  updateProfilePhoto: async (userId: number, photoUrl: string): Promise<boolean> => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { error } = await supabase
+        .from('users')
+        .update({ photo_url: photoUrl })
+        .eq('id', userId);
+      if (!error) return true;
+      console.warn('Supabase updateProfilePhoto error:', error);
+    }
+
+    const users = localDb.getUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      users[idx].photo_url = photoUrl;
+      localDb.saveUsers(users);
+      return true;
+    }
+    return false;
+  },
+
+  changePassword: async (userId: number, newPassword: string): Promise<boolean> => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { error } = await supabase
+        .from('users')
+        .update({ password: newPassword })
+        .eq('id', userId);
+      if (!error) return true;
+      console.warn('Supabase changePassword error:', error);
+    }
+
+    const users = localDb.getUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      users[idx].password = newPassword;
+      localDb.saveUsers(users);
+      return true;
+    }
+    return false;
+  },
+
   syncToSupabase: async (): Promise<{ success: boolean; message: string }> => {
-    return { success: true, message: 'Sinkronisasi berhasil! Semua data Anda tersinkronisasi di Supabase.' };
+    const supabase = getSupabaseClient();
+    if (!supabase) return { success: false, message: 'Supabase belum terkonfigurasi.' };
+
+    try {
+      // 1. Sync Users
+      const { data: remoteUsers } = await supabase.from('users').select('id');
+      if (remoteUsers && remoteUsers.length === 0) {
+        const localUsers = localDb.getUsers();
+        if (localUsers.length > 0) {
+          const { error } = await supabase.from('users').insert(
+            localUsers.map(u => ({
+              id: u.id,
+              name: u.name,
+              nipd: u.nipd,
+              password: u.password || '123',
+              role: u.role,
+              photo_url: u.photo_url || null
+            }))
+          );
+          if (error) console.error('Error syncing users:', error);
+        }
+      }
+
+      // 2. Sync Schedules
+      const { data: remoteSchedules } = await supabase.from('schedules').select('id');
+      if (remoteSchedules && remoteSchedules.length === 0) {
+        const localSchedules = localDb.getSchedules();
+        if (localSchedules.length > 0) {
+          const { error } = await supabase.from('schedules').insert(
+            localSchedules.map(s => ({
+              id: s.id,
+              day: s.day,
+              user_id: s.user_id,
+              is_pj: s.is_pj
+            }))
+          );
+          if (error) console.error('Error syncing schedules:', error);
+        }
+      }
+
+      // 3. Sync Reports
+      const { data: remoteReports } = await supabase.from('reports').select('id');
+      if (remoteReports && remoteReports.length === 0) {
+        const localReports = localDb.getReports();
+        if (localReports.length > 0) {
+          const { error } = await supabase.from('reports').insert(
+            localReports.map(r => ({
+              id: r.id,
+              date: r.date,
+              reporter_id: r.reporter_id,
+              image_path: r.image_path,
+              status: r.status,
+              created_at: r.created_at
+            }))
+          );
+          if (error) console.error('Error syncing reports:', error);
+        }
+      }
+
+      // 4. Sync Details
+      const { data: remoteDetails } = await supabase.from('report_details').select('id');
+      if (remoteDetails && remoteDetails.length === 0) {
+        const localDetails = localDb.getReportDetails();
+        if (localDetails.length > 0) {
+          const { error } = await supabase.from('report_details').insert(
+            localDetails.map(d => ({
+              id: d.id,
+              report_id: d.report_id,
+              student_id: d.student_id,
+              is_present: d.is_present
+            }))
+          );
+          if (error) console.error('Error syncing report details:', error);
+        }
+      }
+
+      return { success: true, message: 'Sinkronisasi berhasil! Semua data lokal telah dipindahkan ke Supabase Cloud.' };
+    } catch (e: any) {
+      return { success: false, message: 'Gagal melakukan sinkronisasi: ' + e.message };
+    }
   }
 };
 
