@@ -186,7 +186,7 @@ export default function Welcome({ currentUser, setCurrentTab }: WelcomeProps) {
         </div>
 
         {/* Right Column - Premium Roster Stats Panel */}
-        <div className="lg:col-span-2 border-4 border-black dark:border-white bg-white dark:bg-red-500 p-6 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#ffffff] flex flex-col justify-between rounded-sm">
+        <div className="lg:col-span-2 border-4 border-black dark:border-white bg-white dark:bg-red-700 p-6 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#ffffff] flex flex-col justify-between rounded-sm">
           <div>
             <div className="flex justify-between items-center border-b-4 border-black dark:border-white pb-3 mb-5">
               <span className="border-2 border-black bg-pink-300 dark:bg-pink-300 px-3 py-1 text-[10px] font-black uppercase shadow-[1.5px_1.5px_0px_0px_#000000] text-black">
@@ -335,8 +335,8 @@ export default function Welcome({ currentUser, setCurrentTab }: WelcomeProps) {
         </div>
 
         {/* Right Columns - High Impact Neubrutalist Illustration Frame */}
-        <div className="md:col-span-2 border-4 border-black dark:border-white bg-white dark:bg-zinc-900 p-4 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#ffffff] flex flex-col justify-between rounded-sm">
-          <div className="border-4 border-black relative overflow-hidden bg-zinc-100 flex items-center justify-center h-full max-h-[380px] aspect-[4/3] sm:aspect-auto">
+        <div className="md:col-span-2 border-4 border-black dark:border-white bg-white dark:bg-zinc-500 p-4 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#ffffff] flex flex-col justify-between rounded-sm">
+          <div className="border-4 border-black relative overflow-hidden bg-blue-800 flex items-center justify-center h-full max-h-[380px] aspect-[4/3] sm:aspect-auto">
             <img
               src="/welcome_piket.png"
               alt="Siswa Piket Yadika 11"
@@ -366,7 +366,7 @@ export default function Welcome({ currentUser, setCurrentTab }: WelcomeProps) {
         {slogans.map((slo, idx) => (
           <div
             key={idx}
-            className="border-4 border-black dark:border-white bg-white dark:bg-zinc-900 p-6 shadow-[5px_5px_0px_0px_#000000] dark:shadow-[5px_5px_0px_0px_#ffffff] hover:-translate-y-1 hover:shadow-[7px_7px_0px_0px_#000000] dark:hover:shadow-[7px_7px_0px_0px_#ffffff] transition-all flex flex-col justify-between rounded-sm"
+            className="border-4 border-black dark:border-white bg-white dark:bg-green-800 p-6 shadow-[5px_5px_0px_0px_#000000] dark:shadow-[5px_5px_0px_0px_#ffffff] hover:-translate-y-1 hover:shadow-[7px_7px_0px_0px_#000000] dark:hover:shadow-[7px_7px_0px_0px_#ffffff] transition-all flex flex-col justify-between rounded-sm"
           >
             <div>
               <div

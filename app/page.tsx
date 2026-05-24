@@ -102,6 +102,9 @@ export default function Home() {
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
       localStorage.setItem('cmon_session_user', JSON.stringify(user));
+      if (user.session_token) {
+        localStorage.setItem('cmon_session_token', user.session_token);
+      }
     }
   };
 
@@ -109,17 +112,85 @@ export default function Home() {
     setCurrentUser(updatedUser);
     if (typeof window !== 'undefined') {
       localStorage.setItem('cmon_session_user', JSON.stringify(updatedUser));
+      if (updatedUser.session_token) {
+        localStorage.setItem('cmon_session_token', updatedUser.session_token);
+      }
     }
     refreshAllData();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (currentUser) {
+      try {
+        await db.clearSession(currentUser.id);
+      } catch (err) {
+        console.warn('Failed to clear session in database on logout:', err);
+      }
+    }
     setCurrentUser(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('cmon_session_user');
+      localStorage.removeItem('cmon_session_token');
     }
     setCurrentTab('welcome');
   };
+
+  // Automatic Inactivity Logout and Session Concurrency Check
+  useEffect(() => {
+    if (typeof window === 'undefined' || !currentUser) return;
+
+    // Admin (guru) has no session limit or inactivity checks
+    if (currentUser.role === 'guru') return;
+
+    const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in ms
+    let lastActivity = Date.now();
+    let lastPingTime = Date.now();
+
+    // Event listener to record user interaction/activity
+    const recordActivity = () => {
+      lastActivity = Date.now();
+    };
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => window.addEventListener(event, recordActivity));
+
+    // Check loop running every 10 seconds
+    const intervalId = setInterval(async () => {
+      const now = Date.now();
+      
+      // 1. Inactivity check
+      if (now - lastActivity >= INACTIVITY_TIMEOUT) {
+        clearInterval(intervalId);
+        events.forEach(event => window.removeEventListener(event, recordActivity));
+        handleLogout();
+        alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 15 menit.');
+        return;
+      }
+
+      // 2. Periodic database verification and session heartbeats (every 60 seconds)
+      if (now - lastPingTime >= 60 * 1000) {
+        lastPingTime = now;
+        const localToken = localStorage.getItem('cmon_session_token') || '';
+        
+        try {
+          const res = await db.pingSession(currentUser.id, localToken);
+          if (!res.valid) {
+            clearInterval(intervalId);
+            events.forEach(event => window.removeEventListener(event, recordActivity));
+            handleLogout();
+            alert('Sesi Anda telah berakhir karena akun ini telah masuk di perangkat/browser lain.');
+          }
+        } catch (err) {
+          console.warn('Failed to verify cloud session heartbeat:', err);
+        }
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+      events.forEach(event => window.removeEventListener(event, recordActivity));
+    };
+  }, [currentUser]);
 
   const handleActionComplete = () => {
     refreshAllData();

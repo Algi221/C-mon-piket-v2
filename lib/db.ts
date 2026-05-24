@@ -7,6 +7,8 @@ export interface User {
   password?: string;
   role: 'siswa' | 'guru';
   photo_url?: string;
+  session_token?: string;
+  last_active_at?: string;
 }
 
 export interface Schedule {
@@ -255,14 +257,78 @@ export const db = {
       
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        return data[0] as User;
+        const user = data[0] as User;
+        
+        // Concurrent login check for standard users (students)
+        if (user.role === 'siswa') {
+          const now = new Date();
+          if (user.session_token && user.last_active_at) {
+            const lastActive = new Date(user.last_active_at);
+            const diffMs = now.getTime() - lastActive.getTime();
+            const diffMins = diffMs / (1000 * 60);
+            
+            if (diffMins < 15) {
+              throw new Error('Akun ini sedang digunakan di perangkat/browser lain. Sesi aktif akan kedaluwarsa setelah 15 menit tanpa aktivitas.');
+            }
+          }
+        }
+        
+        // Generate new session token and update activity timestamp
+        const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const isoNow = new Date().toISOString();
+        
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            session_token: newToken,
+            last_active_at: isoNow
+          })
+          .eq('id', user.id);
+          
+        if (!updateError) {
+          user.session_token = newToken;
+          user.last_active_at = isoNow;
+        }
+        
+        return user;
       }
       console.warn('Supabase verifyLogin failed/no-match, checking LocalStorage:', error);
     }
 
     const users = localDb.getUsers();
     const match = users.find(u => u.nipd === nipd && (!password || u.password === password));
-    return match || null;
+    if (match) {
+      // Concurrent login check for students (siswa) in LocalDb fallback
+      if (match.role === 'siswa') {
+        const now = new Date();
+        if (match.session_token && match.last_active_at) {
+          const lastActive = new Date(match.last_active_at);
+          const diffMs = now.getTime() - lastActive.getTime();
+          const diffMins = diffMs / (1000 * 60);
+          
+          if (diffMins < 15) {
+            throw new Error('Akun ini sedang digunakan di perangkat/browser lain. Sesi aktif akan kedaluwarsa setelah 15 menit tanpa aktivitas.');
+          }
+        }
+      }
+      
+      const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const isoNow = new Date().toISOString();
+      
+      match.session_token = newToken;
+      match.last_active_at = isoNow;
+      
+      // Update local storage users array
+      const allUsers = localDb.getUsers();
+      const userIdx = allUsers.findIndex(u => u.id === match.id);
+      if (userIdx !== -1) {
+        allUsers[userIdx] = match;
+        localDb.saveUsers(allUsers);
+      }
+      
+      return match;
+    }
+    return null;
   },
 
   // --- SCHEDULES ---
@@ -702,6 +768,81 @@ export const db = {
     } catch (e: any) {
       return { success: false, message: 'Gagal melakukan sinkronisasi: ' + e.message };
     }
+  },
+
+  pingSession: async (userId: number, sessionToken: string): Promise<{ valid: boolean }> => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('role, session_token, last_active_at')
+        .eq('id', userId);
+        
+      if (!error && data && data.length > 0) {
+        const user = data[0];
+        
+        // Guru (admin) session is always valid and updates last_active_at
+        if (user.role === 'guru') {
+          const isoNow = new Date().toISOString();
+          await supabase.from('users').update({ last_active_at: isoNow }).eq('id', userId);
+          return { valid: true };
+        }
+        
+        // Compare tokens
+        if (user.session_token === sessionToken) {
+          const isoNow = new Date().toISOString();
+          await supabase.from('users').update({ last_active_at: isoNow }).eq('id', userId);
+          return { valid: true };
+        }
+        
+        return { valid: false };
+      }
+    }
+    
+    // Local fallback
+    const users = localDb.getUsers();
+    const allUsers = localDb.getUsers();
+    const userIdx = allUsers.findIndex(u => u.id === userId);
+    if (userIdx !== -1) {
+      const user = allUsers[userIdx];
+      if (user.role === 'guru') {
+        const isoNow = new Date().toISOString();
+        user.last_active_at = isoNow;
+        localDb.saveUsers(allUsers);
+        return { valid: true };
+      }
+      
+      if (user.session_token === sessionToken) {
+        const isoNow = new Date().toISOString();
+        user.last_active_at = isoNow;
+        localDb.saveUsers(allUsers);
+        return { valid: true };
+      }
+    }
+    
+    return { valid: false };
+  },
+
+  clearSession: async (userId: number): Promise<boolean> => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { error } = await supabase
+        .from('users')
+        .update({ session_token: null, last_active_at: null })
+        .eq('id', userId);
+      if (!error) return true;
+    }
+    
+    // Local fallback
+    const users = localDb.getUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      users[idx].session_token = undefined;
+      users[idx].last_active_at = undefined;
+      localDb.saveUsers(users);
+      return true;
+    }
+    return false;
   }
 };
 
@@ -715,6 +856,8 @@ CREATE TABLE IF NOT EXISTS public.users (
     password TEXT NOT NULL DEFAULT '123',
     role TEXT NOT NULL DEFAULT 'siswa',
     photo_url TEXT,
+    session_token TEXT,
+    last_active_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

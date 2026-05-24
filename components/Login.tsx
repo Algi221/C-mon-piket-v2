@@ -57,17 +57,6 @@ export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: Lo
     }
   };
 
-  // Quick fill buttons for testing
-  const handleQuickFill = (role: 'siswa' | 'guru') => {
-    if (role === 'siswa') {
-      setNipd('0002');
-      setPassword('123');
-    } else {
-      setNipd('admin');
-      setPassword('admin');
-    }
-    setErrorMsg(null);
-  };
 
   return (
     <div className="mx-auto max-w-6xl p-4 font-sans md:p-6 animate-fade-in flex flex-col justify-center min-h-[85vh] items-center text-black dark:text-white">
@@ -117,7 +106,7 @@ export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: Lo
                   required
                   value={nipd}
                   onChange={(e) => setNipd(e.target.value)}
-                  placeholder="NIPD / ID USER (e.g. 0002, admin)"
+                  placeholder="NIPD / ID USER (e.g. 0002)"
                   className="w-full border-4 border-[#7c3aed] dark:border-white bg-zinc-50 dark:bg-zinc-800 py-4 pl-12 pr-4 font-black uppercase text-xs placeholder-zinc-400 outline-none focus:bg-white dark:focus:bg-zinc-800 shadow-[3px_3px_0px_0px_#0ea5e9] dark:shadow-[3px_3px_0px_0px_#ffffff] text-black dark:text-white"
                 />
               </div>
@@ -152,28 +141,6 @@ export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: Lo
               </button>
             </div>
           </form>
-
-          {/* Quick fills for easy testing - COLORFUL BORDERS & SHADOWS */}
-          <div className="mt-8 border-t-2 border-dashed border-zinc-200 dark:border-zinc-800 pt-4">
-            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 block mb-2.5 tracking-wider">MOCK SHORTCUT (PENGUJIAN KREDENSIAL):</span>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('siswa')}
-                className="flex-1 border-2 border-[#7c3aed] dark:border-white bg-zinc-50 dark:bg-zinc-800 hover:bg-cyan-100 dark:hover:bg-cyan-900 p-2.5 text-[9px] font-black uppercase transition-all shadow-[2px_2px_0px_0px_#0ea5e9] dark:shadow-[2px_2px_0px_0px_#ffffff] active:shadow-none cursor-pointer text-black dark:text-white"
-              >
-                Siswa: 0002 / 123
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleQuickFill('guru')}
-                className="flex-1 border-2 border-[#7c3aed] dark:border-white bg-zinc-50 dark:bg-zinc-800 hover:bg-yellow-100 dark:hover:bg-yellow-900 p-2.5 text-[9px] font-black uppercase transition-all shadow-[2px_2px_0px_0px_#0ea5e9] dark:shadow-[2px_2px_0px_0px_#ffffff] active:shadow-none cursor-pointer text-black dark:text-white"
-              >
-                Guru: admin / admin
-              </button>
-            </div>
-          </div>
 
         </div>
 
