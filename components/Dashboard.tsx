@@ -50,10 +50,8 @@ export default function Dashboard({
   
   // Roster states
   const [todaySchedule, setTodaySchedule] = useState<Schedule[]>([]);
-  const [todayPjs, setTodayPjs] = useState<Schedule[]>([]);
   const [isWeekend, setIsWeekend] = useState(false);
   const [todayCompleted, setTodayCompleted] = useState(false);
-  const [bypassLocks, setBypassLocks] = useState(false);
 
   // Active student logs view (roster = Check-in & Roster list, calendar = Calendar log view, history = List view)
   const [activeTab, setActiveTab] = useState<'roster' | 'calendar' | 'history'>('roster');
@@ -109,25 +107,19 @@ export default function Dashboard({
   }, []);
 
   // Sync today's rosters and PJ checks
-  const showWeekendScreen = isWeekend && !bypassLocks;
+  const showWeekendScreen = isWeekend;
 
   useEffect(() => {
     if (!currentDay) return;
 
     if (showWeekendScreen) {
       setTodaySchedule([]);
-      setTodayPjs([]);
       return;
     }
 
-    // Filter today's duty schedules (bypass locks on weekends will mock Monday's schedules)
-    const activeDay = (isWeekend && bypassLocks) ? 'Senin' : currentDay;
-    const filteredToday = schedules.filter((s) => s.day === activeDay);
+    // Filter today's duty schedules
+    const filteredToday = schedules.filter((s) => s.day === currentDay);
     setTodaySchedule(filteredToday);
-
-    // Find if PJs exist today (supports multiple PJs)
-    const pjs = filteredToday.filter((s) => s.is_pj);
-    setTodayPjs(pjs);
 
     // Pre-populate teammate presence checkboxes
     const initialAttendance: { [userId: number]: boolean } = {};
@@ -155,7 +147,7 @@ export default function Dashboard({
     };
 
     checkReportExists();
-  }, [currentDay, schedules, logs, showWeekendScreen, bypassLocks]);
+  }, [currentDay, schedules, logs, showWeekendScreen]);
 
   // Handle Photo input (Base64 file reader)
   const handlePhotoChange = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -333,8 +325,8 @@ export default function Dashboard({
     setSelectedCalendarReport(reportOnDate || null);
   };
 
-  // Dynamic lock check logic (Any today PJ, bypassed in test mode)
-  const isUserPjToday = bypassLocks || (currentUser && todayPjs.length > 0 ? todayPjs.some(pj => pj.user_id === currentUser.id) : false);
+  // Dynamic lock check logic (Any scheduled student can report)
+  const isUserOnRosterToday = currentUser && todaySchedule.length > 0 ? todaySchedule.some(s => s.user_id === currentUser.id) : false;
 
   return (
     <div className="mx-auto max-w-6xl p-4 font-sans md:p-6 animate-fade-in">
@@ -374,18 +366,8 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* Live clock and Test Bypass switch button */}
+        {/* Live clock */}
         <div className="flex items-center gap-2.5 flex-wrap justify-end">
-          <button
-            type="button"
-            onClick={() => setBypassLocks(!bypassLocks)}
-            className={`border-2 border-black px-2.5 py-1.5 text-[9px] font-black uppercase shadow-[2.5px_2.5px_0px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer ${
-              bypassLocks ? 'bg-pink-300 text-black border-black' : 'bg-zinc-50 text-zinc-400 border-zinc-200 hover:border-black hover:text-black'
-            }`}
-            title="Aktivasi Mode Uji Coba: Bypass PJ & Hari Libur untuk testing"
-          >
-            {bypassLocks ? '🧪 TEST MODE: BYPASS ON' : '🧪 TEST MODE: OFF'}
-          </button>
           <div className="shrink-0 flex items-center gap-2 border-2 border-black bg-yellow-300 px-3 py-2 shadow-[2px_2px_0px_0px_#000000] text-xs font-black uppercase">
             <Clock className="h-4 w-4 stroke-[3px]" />
             <span>{liveTime || '00:00'} WIB</span>
@@ -476,18 +458,7 @@ export default function Dashboard({
                   </div>
                 )}
 
-                {/* PJ Card Indicator */}
-                {todayPjs.length > 0 ? (
-                  <div className="mb-6 border-2 border-black bg-yellow-100 p-3 shadow-[3px_3px_0px_0px_#000000] text-xs font-black uppercase flex items-center gap-2">
-                    <Award className="h-5 w-5 text-yellow-600 stroke-[2.5px]" />
-                    <span>Penanggung Jawab (PJ) Hari Ini: **{todayPjs.map(pj => pj.student?.name).join(', ')}**</span>
-                  </div>
-                ) : (
-                  <div className="mb-6 border-2 border-black bg-red-100 p-3 shadow-[3px_3px_0px_0px_#000000] text-xs font-black uppercase flex items-center gap-2 text-red-700">
-                    <ShieldAlert className="h-5 w-5 stroke-[2.5px]" />
-                    <span>Belum ada Penanggung Jawab (PJ) yang ditunjuk oleh guru! (Minimal 2)</span>
-                  </div>
-                )}
+
 
                 {/* Duty Teammates Grid */}
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -497,19 +468,12 @@ export default function Dashboard({
                     return (
                       <div
                         key={item.id}
-                        className={`border-2 border-black p-4 shadow-[3px_3px_0px_0px_#000000] transition-all flex flex-col justify-between ${
-                          item.is_pj ? 'bg-yellow-50' : 'bg-white'
-                        }`}
+                        className="border-2 border-black p-4 bg-white shadow-[3px_3px_0px_0px_#000000] transition-all flex flex-col justify-between"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="border border-black bg-zinc-950 px-2 py-0.5 text-[8px] font-black text-white uppercase">
                             NO: {s.nipd}
                           </span>
-                          {item.is_pj && (
-                            <span className="border border-black bg-yellow-300 px-2 py-0.5 text-[8px] font-black text-black uppercase shadow-[1.5px_1.5px_0px_0px_#000000]">
-                              PJ REGU 👑
-                            </span>
-                          )}
                         </div>
 
                         <h3 className="text-base font-black text-black leading-tight uppercase truncate">{s.name}</h3>
@@ -531,9 +495,9 @@ export default function Dashboard({
                       Laporan Piket Regu Anda Sudah Terkirim ke Guru!
                     </div>
                   ) : (
-                    // LOCK LOGIC: ONLY TODAY'S PJS CAN REPORT (Bypassed in Test Mode)
+                    // LOCK LOGIC: ANY TODAY SCHEDULED USER CAN REPORT
                     currentUser ? (
-                      isUserPjToday ? (
+                      isUserOnRosterToday ? (
                         <button
                           onClick={() => setReportingOpen(true)}
                           className={`w-full border-2 border-black py-3.5 font-black text-xs uppercase shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_#000000] active:translate-x-0 active:translate-y-0 active:shadow-none cursor-pointer ${
@@ -546,7 +510,7 @@ export default function Dashboard({
                         <div className="border-2 border-black bg-yellow-100 p-3 text-xs font-bold text-yellow-800 flex items-start gap-2.5 shadow-[2px_2px_0px_0px_#000000]">
                           <AlertTriangle className="h-5 w-5 stroke-[2.5px] text-yellow-700 shrink-0 mt-0.5" />
                           <span>
-                            Akses Dikunci! Hanya Penanggung Jawab (PJ) piket hari **{currentDay.toUpperCase()}** (**{todayPjs.map(pj => pj.student?.name).join(', ') || 'Belum ditunjuk'}**) yang berhak mengirimkan laporan piket hari ini.
+                            Akses Dikunci! Hanya siswa yang terjadwal piket hari **{currentDay.toUpperCase()}** yang berhak mengirimkan laporan piket hari ini.
                           </span>
                         </div>
                       )
@@ -555,7 +519,7 @@ export default function Dashboard({
                         onClick={() => setCurrentTab('welcome')}
                         className="w-full border-2 border-black bg-yellow-300 py-3.5 font-black text-xs uppercase shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 cursor-pointer"
                       >
-                        MASUK UNTUK VERIFIKASI SEBAGAI PJ 🔒
+                        MASUK UNTUK MELAPOR PIKET 🔒
                       </button>
                     )
                   )}
@@ -574,7 +538,7 @@ export default function Dashboard({
             <ul className="space-y-3 font-bold text-zinc-700 text-[10px] uppercase leading-relaxed">
               <li className="flex items-start gap-2">
                 <span className="text-yellow-600 font-bold shrink-0">1.</span>
-                <span>Hanya **PJ Regu** piket harian yang diizinkan melakukan pelaporan.</span>
+                <span>Semua siswa yang piket pada hari tersebut diizinkan melakukan pelaporan.</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-yellow-600 font-bold shrink-0">2.</span>
@@ -855,7 +819,7 @@ export default function Dashboard({
             <div className="border-b-4 border-black pb-4 mb-4 flex items-center justify-between">
               <div>
                 <span className="border-2 border-black bg-yellow-300 px-2.5 py-0.5 text-xs font-black uppercase shadow-[2px_2px_0px_0px_#000000]">
-                  PRESENSI PJ
+                  PRESENSI PIKET
                 </span>
                 <h3 className="text-2xl font-black uppercase text-black mt-1 leading-none">
                   Kirim Laporan Piket Hari Ini
@@ -901,7 +865,7 @@ export default function Dashboard({
                         <span className={`flex h-4 w-4 shrink-0 items-center justify-center border-2 border-black ${isChecked ? 'bg-black text-white' : 'bg-white'}`}>
                           {isChecked && <Check className="h-3 w-3 stroke-[4px]" />}
                         </span>
-                        <span className="truncate">{s.name} {sch.is_pj ? '(PJ)' : ''}</span>
+                        <span className="truncate">{s.name}</span>
                       </button>
                     );
                   })}

@@ -52,24 +52,10 @@ export default function ScheduleManager({ currentUser, students, schedules, onAc
     }
   };
 
-  const setPJStudent = (studentId: number) => {
-    setAssignedRoster(assignedRoster.map(r => {
-      if (r.userId === studentId) {
-        return { ...r, isPj: !r.isPj };
-      }
-      return r;
-    }));
-  };
 
   const handleSave = async () => {
     if (!selectedDay) return;
 
-    // Enforce that each duty roster day has at least 2 PJs
-    const pjCount = assignedRoster.filter(r => r.isPj).length;
-    if (pjCount < 2) {
-      alert('Peringatan Roster: Setiap hari piket wajib memiliki minimal 2 Penanggung Jawab (PJ) kelas!');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -95,12 +81,8 @@ export default function ScheduleManager({ currentUser, students, schedules, onAc
             JADWAL PIKET KELAS
           </h1>
           <p className="mt-2 text-sm font-bold text-zinc-800 uppercase">
-            Jadwal pembagian regu piket kelas Senin sampai Jumat. Klik &apos;Edit Roster&apos; untuk mengatur anggota atau menunjuk Penanggung Jawab!
+            Jadwal pembagian regu piket kelas Senin sampai Jumat. Klik &apos;Edit Roster&apos; untuk mengatur anggota regu piket!
           </p>
-        </div>
-        
-        <div className="border-2 border-black bg-white p-3 shadow-[3px_3px_0px_0px_#000000] text-xs font-black uppercase text-center shrink-0">
-          👑 PJ PIKET BERTANGGUNG JAWAB MEMANDU REGU
         </div>
       </div>
 
@@ -138,17 +120,14 @@ export default function ScheduleManager({ currentUser, students, schedules, onAc
                       return (
                         <div
                           key={item.id}
-                          className={`border-2 border-black p-2 shadow-[2px_2px_0px_0px_#000000] transition-all flex items-center justify-between ${
-                            item.is_pj ? 'bg-yellow-50' : 'bg-zinc-50'
-                          }`}
+                          className="border-2 border-black p-2 bg-zinc-50 shadow-[2px_2px_0px_0px_#000000] transition-all flex items-center justify-between"
                         >
                           <div className="min-w-0">
                             <p className="text-xs font-black text-black truncate leading-tight uppercase flex items-center gap-1">
-                              {item.is_pj && <Star className="h-3 w-3 fill-yellow-400 stroke-black shrink-0" />}
                               <span className="truncate">{s.name}</span>
                             </p>
                             <p className="text-[9px] font-bold text-zinc-500 uppercase mt-0.5">
-                              NO: {s.nipd} {item.is_pj ? '• PJ KELAS' : '• Anggota'}
+                              NO: {s.nipd}
                             </p>
                           </div>
                         </div>
@@ -207,7 +186,7 @@ export default function ScheduleManager({ currentUser, students, schedules, onAc
               <div className="border-2 border-black bg-cyan-50 p-3 text-xs font-bold text-cyan-900 flex items-start gap-2 shadow-[2px_2px_0px_0px_#000000]">
                 <Info className="h-4.5 w-4.5 stroke-[2.5px] text-cyan-700 shrink-0 mt-0.5" />
                 <span>
-                  Centang siswa piket hari **{selectedDay.toUpperCase()}**, lalu ketuk bintang kuning 👑 untuk menunjuk penanggung jawab regu.
+                  Centang siswa piket hari **{selectedDay.toUpperCase()}** untuk ditambahkan ke regu piket kelas.
                 </span>
               </div>
 
@@ -247,18 +226,6 @@ export default function ScheduleManager({ currentUser, students, schedules, onAc
                             <span className="truncate">{student.name}</span>
                           </button>
 
-                          {isSelected && (
-                            <button
-                              type="button"
-                              onClick={() => setPJStudent(student.id)}
-                              title={isPj ? 'Penanggung Jawab Aktif' : 'Jadikan Penanggung Jawab'}
-                              className={`h-7 w-7 border border-black flex items-center justify-center transition-all ${
-                                isPj ? 'bg-yellow-300 shadow-[1px_1px_0px_0px_#000000]' : 'bg-white hover:bg-zinc-100'
-                              } cursor-pointer`}
-                            >
-                              <Star className={`h-4 w-4 stroke-[2.5px] ${isPj ? 'fill-yellow-500 text-black' : 'text-zinc-400'}`} />
-                            </button>
-                          )}
                         </div>
                       );
                     })}

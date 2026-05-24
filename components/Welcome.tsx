@@ -322,7 +322,7 @@ export default function Welcome({ currentUser, setCurrentTab }: WelcomeProps) {
                 </span>
                 <p className="leading-tight">
                   Menjamin pelaporan bukti kebersihan yang terverifikasi akurat
-                  oleh Guru dan PJ Piket kelas.
+                  oleh Guru dan anggota piket kelas.
                 </p>
               </div>
             </div>

@@ -549,7 +549,7 @@ export default function TeacherDashboard({
                                 <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">{report.date}</span>
                               </div>
                               <div className="text-right">
-                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-wider block">Reporter PJ Utama</span>
+                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-wider block">Siswa Pelapor</span>
                                 <span className="text-sm font-black text-cyan-600 dark:text-cyan-400">{report.reporter_name}</span>
                               </div>
                             </div>
