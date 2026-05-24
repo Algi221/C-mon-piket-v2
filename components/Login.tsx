@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { KeyRound, AlertCircle, User as UserIcon, Lock, ChevronLeft, Sparkles } from 'lucide-react';
+import { KeyRound, AlertCircle, User as UserIcon, Lock, ChevronLeft, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { db, User } from '../lib/db';
 import confetti from 'canvas-confetti';
 
@@ -14,6 +14,7 @@ interface LoginProps {
 export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: LoginProps) {
   const [nipd, setNipd] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -71,10 +72,10 @@ export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: Lo
       </button>
 
       {/* Main Login Split-Card - VIBRANT DEEP PURPLE BORDERS & SKY BLUE SHADOW */}
-      <div className="w-full border-4 border-[#7c3aed] dark:border-white bg-white dark:bg-zinc-900 shadow-[12px_12px_0px_0px_#0ea5e9] dark:shadow-[12px_12px_0px_0px_#ffffff] grid md:grid-cols-2 rounded-sm overflow-hidden min-h-[550px]">
+      <div className="w-full border-4 border-[#7c3aed] dark:border-white bg-white dark:bg-yellow-500 shadow-[12px_12px_0px_0px_#0ea5e9] dark:shadow-[12px_12px_0px_0px_#ffffff] grid md:grid-cols-2 rounded-sm overflow-hidden min-h-[550px]">
         
         {/* LEFT COLUMN: SIGN IN FORM */}
-        <div className="p-8 sm:p-12 flex flex-col justify-between bg-white dark:bg-zinc-900 text-black dark:text-white">
+        <div className="p-8 sm:p-12 flex flex-col justify-between bg-white dark:bg-yellow-500 text-black dark:text-white">
           
           <form onSubmit={handleLogin} className="space-y-6 my-auto">
             <div className="text-center md:text-left">
@@ -82,8 +83,8 @@ export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: Lo
                 Sign In
               </h2>
               
-              <span className="text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 block mb-4 tracking-widest">
-                MASUK DENGAN KREDENSIAL NIPD / PASSWORD PIKET:
+              <span className="text-[10px] font-black uppercase text-black dark:text-black block mb-4 tracking-widest">
+                MASUK DENGAN NIPD / PASSWORD PIKET:
               </span>
             </div>
 
@@ -106,7 +107,7 @@ export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: Lo
                   required
                   value={nipd}
                   onChange={(e) => setNipd(e.target.value)}
-                  placeholder="NIPD / ID USER (e.g. 0002)"
+                  placeholder="NIPD / ID USER"
                   className="w-full border-4 border-[#7c3aed] dark:border-white bg-zinc-50 dark:bg-zinc-800 py-4 pl-12 pr-4 font-black uppercase text-xs placeholder-zinc-400 outline-none focus:bg-white dark:focus:bg-zinc-800 shadow-[3px_3px_0px_0px_#0ea5e9] dark:shadow-[3px_3px_0px_0px_#ffffff] text-black dark:text-white"
                 />
               </div>
@@ -116,19 +117,27 @@ export default function Login({ onLoginSuccess, currentUser, setCurrentTab }: Lo
                   <Lock className="h-5 w-5 stroke-[2.5px]" />
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="PASSWORD KREDENSIAL"
-                  className="w-full border-4 border-[#7c3aed] dark:border-white bg-zinc-50 dark:bg-zinc-800 py-4 pl-12 pr-4 font-black text-xs placeholder-zinc-400 outline-none focus:bg-white dark:focus:bg-zinc-800 shadow-[3px_3px_0px_0px_#0ea5e9] dark:shadow-[3px_3px_0px_0px_#ffffff] text-black dark:text-white"
+                  placeholder="PASSWORD"
+                  className="w-full border-4 border-[#7c3aed] dark:border-white bg-zinc-50 dark:bg-zinc-800 py-4 pl-12 pr-12 font-black text-xs placeholder-zinc-400 outline-none focus:bg-white dark:focus:bg-zinc-800 shadow-[3px_3px_0px_0px_#0ea5e9] dark:shadow-[3px_3px_0px_0px_#ffffff] text-black dark:text-white"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#7c3aed] dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 focus:outline-none cursor-pointer flex items-center justify-center"
+                  title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5 stroke-[2.5px]" /> : <Eye className="h-5 w-5 stroke-[2.5px]" />}
+                </button>
               </div>
             </div>
 
             {/* Forgot sandi & submit - EMERALD GREEN BUTTON WITH VIOLET SHADOW */}
             <div className="pt-4 flex flex-col gap-4">
-              <span className="text-[10px] font-black uppercase text-zinc-400 hover:text-[#7c3aed] dark:hover:text-white cursor-pointer text-center md:text-left self-start tracking-wider">
+              <span className="text-[10px] font-black uppercase text-black hover:text-[#7c3aed] dark:hover:text-white cursor-pointer text-center md:text-left self-start tracking-wider">
                 Lupa password akun? Hubungi Admin XI-J
               </span>
 
